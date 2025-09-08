@@ -50,6 +50,7 @@ public class PostServiceImpl implements PostService {
 
     @Autowired
     private FriendshipService friendshipService;
+
     @Override
     public Post createPost(PostCreateDto dto, User user) {
         Post post = new Post();
@@ -156,15 +157,15 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Page<PostDisplayDto> getPublicPostsByUser(User targetUser,User currentUser ,Pageable pageable) {
-        Page<Post> posts = postRepository.findVisiblePostsByUser(targetUser, currentUser,pageable);
+    public Page<PostDisplayDto> getPublicPostsByUser(User targetUser, User currentUser, Pageable pageable) {
+        Page<Post> posts = postRepository.findVisiblePostsByUser(targetUser, currentUser, pageable);
         return posts.map(post -> convertToDisplayDto(post, null));
     }
 
 
     @Override
-    public Page<PostDisplayDto> searchUserPosts(User user,User currentUser, String keyword, Pageable pageable) {
-        Page<Post> posts = postRepository.searchPostsOnProfile(user,currentUser, keyword, pageable);
+    public Page<PostDisplayDto> searchUserPosts(User user, User currentUser, String keyword, Pageable pageable) {
+        Page<Post> posts = postRepository.searchPostsOnProfile(user, currentUser, keyword, pageable);
         return posts.map(post -> convertToDisplayDto(post, user));
     }
 
@@ -229,11 +230,16 @@ public class PostServiceImpl implements PostService {
         boolean canDelete = canEdit;
 
         PostDisplayDto dto = new PostDisplayDto(post, isLiked, canEdit, canDelete);
-        Friendship.FriendshipStatus friendshipStatus =
-                friendshipService.getFriendshipStatus(post.getUser(), currentUser);
-        boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
 
-        dto.setCanComment(PrivacyUtils.canView(currentUser, post.getUser(), post.getPrivacyCommentLevel(), isFriend));
+        if (currentUser.isAdmin()) {
+            dto.setCanComment(true);
+        }else{
+            Friendship.FriendshipStatus friendshipStatus =
+                friendshipService.getFriendshipStatus(post.getUser(), currentUser);
+            boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
+            dto.setCanComment(PrivacyUtils.canView(currentUser, post.getUser(), post.getPrivacyCommentLevel(), isFriend));
+        }
+
         dto.setLikesCount(getLikeCount(post));
         dto.setCommentsCount(countCommentsByPost(post));
         return dto;

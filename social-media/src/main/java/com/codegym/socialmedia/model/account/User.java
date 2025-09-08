@@ -145,6 +145,10 @@ public class User {
                 '}';
     }
 
+    public boolean isAdmin() {
+        return  this.roles.stream()
+                .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
+    }
 
 
 }

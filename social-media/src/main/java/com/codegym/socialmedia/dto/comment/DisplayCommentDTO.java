@@ -72,11 +72,14 @@ public class DisplayCommentDTO {
         DisplayCommentDTO dto = new DisplayCommentDTO();
         Post p = comment.getPost();
 
-        Friendship.FriendshipStatus friendshipStatus =
-                friendshipService.getFriendshipStatus(p.getUser(), currentUser);
-        boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
-
-        dto.setCanReply(PrivacyUtils.canView(currentUser, p.getUser(), p.getPrivacyCommentLevel(), isFriend));
+        if (currentUser.isAdmin()) {
+            dto.setCanReply(true);
+        }else{
+            Friendship.FriendshipStatus friendshipStatus =
+                    friendshipService.getFriendshipStatus(p.getUser(), currentUser);
+            boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
+            dto.setCanReply(PrivacyUtils.canView(currentUser, p.getUser(), p.getPrivacyCommentLevel(), isFriend));
+        }
 
         dto.setCommentId(comment.getId());
         dto.setComment(comment.getContent());
