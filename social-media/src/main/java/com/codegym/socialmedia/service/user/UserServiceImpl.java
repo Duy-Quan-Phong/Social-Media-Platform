@@ -1,15 +1,13 @@
 package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.component.CloudinaryService;
+import com.codegym.socialmedia.dto.UserDTO;
 import com.codegym.socialmedia.dto.UserRegistrationDto;
 import com.codegym.socialmedia.model.account.NotificationSettings;
 import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.account.UserPrivacySettings;
-import com.codegym.socialmedia.repository.IUserRepository;
-import com.codegym.socialmedia.repository.NotificationSettingsRepository;
-import com.codegym.socialmedia.repository.RoleRepository;
-import com.codegym.socialmedia.repository.UserPrivacySettingsRepository;
+import com.codegym.socialmedia.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -51,9 +50,7 @@ public class UserServiceImpl implements UserService {
     @Autowired
     @Qualifier("customUserDetailsService")
     private UserDetailsService userDetailsService;
-
-    // ✅ REMOVED FriendshipService dependency to fix circular dependency
-
+    private FriendshipRepository friendshipRepository;
     public User save(UserRegistrationDto registrationDto) {
         User user = new User();
         user.setUsername(registrationDto.getUsername());
@@ -110,6 +107,24 @@ public class UserServiceImpl implements UserService {
 
         return null;
     }
+    @Override
+    public List<UserDTO> searchUsers(String keyword, Long currentUserId) {
+        if (keyword == null || keyword.isBlank()) {
+            return Collections.emptyList(); // hoặc trả list rỗng để không hiển thị gì
+        }
+
+        List<User> friends = friendshipRepository.findFriendsByKeyword(currentUserId, keyword);
+
+        return friends.stream()
+                .map(u -> new UserDTO(
+                        u.getId(),
+                        u.getUsername(),
+                        u.getFirstName() + " " + u.getLastName(),
+                        u.getProfilePicture()
+                ))
+                .toList();
+    }
+
 
     @Override
     public User getUserById(Long id) {

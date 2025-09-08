@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.service.user;
 
+import com.codegym.socialmedia.dto.UserDTO;
 import com.codegym.socialmedia.dto.UserRegistrationDto;
 import com.codegym.socialmedia.model.account.User;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,5 @@ public interface UserService {
     long countUsers();
 
     void deleteAllUsers();
-
-    // ✅ REMOVED getUserStats method - now handled by UserStatsService
+    List<UserDTO> searchUsers(String keyword, Long currentUserId);
 }

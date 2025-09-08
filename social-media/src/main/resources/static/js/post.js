@@ -357,13 +357,15 @@ class PostManager {
                 <div class="post-comments" id="comments-${post.id}" style="display: none;">
                  ${post.canComment ? `<div class="comment-form">
                         <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar">
-                        <div class="comment-input-container">
+                        <div class="comment-input-container" style="position: relative">
                             <textarea class="comment-input" placeholder="Viết bình luận..." 
-                                     onkeypress="postManager.handleCommentKeyPress(event, ${post.id})"></textarea>
-                            <button class="comment-submit" onclick="postManager.submitComment(${post.id})">
+                                     onkeypress="postManager.handleCommentKeyPress(event, ${post.id})"
+                                     oninput="postManager.showMentionSuggestions(${post.id}, this)"></textarea>
+                            <ul id="mentions-dropdown-${post.id}" class="mentions-dropdown"></ul>
+                             <button class="comment-submit" onclick="postManager.submitComment(${post.id})">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
-                        </div>
+                         </div>
                     </div>` : ''}
                     
                     
@@ -1129,7 +1131,7 @@ class PostManager {
             const response = await fetch(`api/comments/add`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({postId, content})
+                body: JSON.stringify({postId, content, mentions: []})
             });
             console.log('Response status:', response.status);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1311,8 +1313,60 @@ class PostManager {
             postsCountEl.textContent = currentCount + 1;
         }
     }
-}
+    showMentionSuggestions(postId, inputElement) {
+        const value = inputElement.value;
+        const lastWord = value.split(" ").pop();
+        const dropdown = document.querySelector(`#mentions-dropdown-${postId}`);
+        if (!lastWord.startsWith("@")){
+            dropdown.style.display = "none";
+        }
+        if (lastWord.startsWith("@")) {
+            const query = lastWord.substring(1);
 
+            fetch(`/api/friends/search?keyword=${query}`)
+                .then(res => res.json())
+                .then(users => {
+                    console.log("Query: ", query);
+
+                    dropdown.innerHTML = "";
+
+                    users.forEach(user => {
+                        const li = document.createElement("li");
+                        li.classList.add("mention-suggestion");
+
+                        li.innerHTML = `
+                        <img src="${user.avatarUrl || '/images/default-avatar.png'}" 
+                             alt="${user.fullName}" class="mention-avatar">
+                        <span class="mention-name">${user.fullName}</span>
+                    `;
+
+                        li.onclick = () => addMention(postId, user, inputElement);
+                        dropdown.appendChild(li);
+                    });
+
+                    dropdown.style.display = users.length > 0 ? "block" : "none";
+                });
+
+        }
+
+    }
+}
+let mentionsByPost = {};
+function addMention(postId, user, inputElement) {
+    // replace từ @abc thành @username
+    inputElement.value = inputElement.value.replace(/@\S*$/, `@${user.fullName} `);
+
+    if (!mentionsByPost[postId]) {
+        mentionsByPost[postId] = [];
+    }
+
+    if (!mentionsByPost[postId].includes(user.id)) {
+        mentionsByPost[postId].push(user.id);
+    }
+
+    const dropdown = document.querySelector(`#mentions-dropdown-${postId}`);
+    dropdown.style.display = "none";
+}
 let stompClient = null;
 // Initialize PostManager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {

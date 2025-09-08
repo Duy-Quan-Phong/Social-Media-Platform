@@ -32,7 +32,6 @@ public class PostMessage {
         messagingTemplate.convertAndSend("/topic/post/" + postId + "/comments", payload);
 
     }
-
     public void notifyCommentLikeChanged(Long commentId, Integer likeCount, boolean isLiked, String userName) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("commentId", commentId);

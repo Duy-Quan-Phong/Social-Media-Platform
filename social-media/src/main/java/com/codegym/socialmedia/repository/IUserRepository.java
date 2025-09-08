@@ -54,4 +54,10 @@ public interface IUserRepository extends JpaRepository<User, Long> {
                                             @Param("currentUserId") Long currentUserId,
                                             Pageable pageable);
     Page<User> findByIdNot(Long id, Pageable pageable);
+    // Nếu bạn muốn tìm theo cả tên + họ
+    @Query("SELECT u FROM User u " +
+            "WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<User> searchUsers(@Param("keyword") String keyword);
 }

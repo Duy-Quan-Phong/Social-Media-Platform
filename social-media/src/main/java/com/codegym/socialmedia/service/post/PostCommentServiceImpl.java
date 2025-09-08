@@ -3,6 +3,8 @@ package com.codegym.socialmedia.service.post;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
+import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.comment.CommentMentionRepository;
 import com.codegym.socialmedia.repository.comment.LikeCommentRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
@@ -23,16 +26,16 @@ import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
 @Service
 @RequiredArgsConstructor
 public class PostCommentServiceImpl implements PostCommentService {
-
+    private final IUserRepository userRepository;
     private final PostCommentRepository postCommentRepository;
     private final PostRepository postRepository;
     private final LikeCommentRepository likeCommentRepository;
     private final PostMessage postMessage;
     private final NotificationService notificationService;
     private final FriendshipService friendshipService;
-
+    private final CommentMentionRepository commentMentionRepository;
     @Override
-    public PostComment addComment(Long postId, User user, String content) {
+    public PostComment addComment(Long postId, User user, String content, List<Long> mentionIds) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
 
@@ -46,21 +49,44 @@ public class PostCommentServiceImpl implements PostCommentService {
         comment.setCreatedAt(LocalDateTime.now());
 
         try {
+            // ✅ Lưu comment trước
             PostComment savedComment = postCommentRepository.save(comment);
 
-            // ✅ cập nhật số lượng comment
-            postMessage.notifyCommentStatusChanged(postId, postCommentRepository.countByPost(post));
+            // ✅ Lưu mentions nếu có
+            if (mentionIds != null && !mentionIds.isEmpty()) {
+                List<User> mentionedUsers = userRepository.findAllById(mentionIds);
 
-            // ✅ gửi thông báo cho chủ bài viết
-            notificationService.notify(
-                    user.getId(),
-                    postOwner.getId(),
-                    Notification.NotificationType.COMMENT_POST,
-                    Notification.ReferenceType.COMMENT,
-                    savedComment.getId()
+                for (User mentionedUser : mentionedUsers) {
+
+                    notificationService.notify(
+                            user.getId(),
+                            mentionedUser.getId(),
+                            Notification.NotificationType.MENTION_COMMENT,
+                            Notification.ReferenceType.COMMENT,
+                            savedComment.getId()
+                    );
+                }
+            }
+
+            // ✅ Cập nhật số lượng comment cho post
+            postMessage.notifyCommentStatusChanged(
+                    postId,
+                    postCommentRepository.countByPost(post)
             );
 
+            // ✅ Gửi thông báo cho chủ bài viết
+            if (!user.getId().equals(postOwner.getId())) {
+                notificationService.notify(
+                        user.getId(),
+                        postOwner.getId(),
+                        Notification.NotificationType.COMMENT_POST,
+                        Notification.ReferenceType.COMMENT,
+                        savedComment.getId()
+                );
+            }
+
             return savedComment;
+
         } catch (Exception e) {
             e.printStackTrace();
             return null;

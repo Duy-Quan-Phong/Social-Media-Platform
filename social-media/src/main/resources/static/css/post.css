@@ -410,8 +410,9 @@
 }
 
 .comment-input-container {
-    flex: 1;
     position: relative;
+    flex: 1;
+    align-items: center;
 }
 
 .comment-input {
@@ -768,5 +769,42 @@ video:-ms-fullscreen {
     height: 100% !important;
     object-fit: contain;
     background: black;
+}
+.mentions-dropdown {
+    position: absolute;
+    top: 100%; /* ngay dưới input */
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: none;
+    z-index: 1000;
+}
+.mention-suggestion {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.mention-suggestion:hover {
+    background: #f0f0f0;
+}
+
+.mention-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
+
+.mention-name {
+    font-size: 14px;
+    font-weight: 500;
 }
 

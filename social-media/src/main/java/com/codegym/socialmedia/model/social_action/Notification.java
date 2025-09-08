@@ -44,7 +44,8 @@ public class Notification {
         LIKE_COMMENT,
         COMMENT_POST,
         REPLY_COMMENT,
-        FRIEND_REQUEST
+        FRIEND_REQUEST,
+        MENTION_COMMENT
     }
 }
 
