@@ -1,0 +1,92 @@
+<div th:fragment="content">
+
+    <div class="form-group-custom">
+        <label>Hiển thị hồ sơ:</label>
+        <select th:field="*{showProfile}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Hiển thị danh sách bạn bè:</label>
+        <select th:field="*{showFriendList}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Hiển thị tên đầy đủ:</label>
+        <select th:field="*{showFullName}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Hiển thị số điện thoại:</label>
+        <select th:field="*{showPhone}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Hiển thị email:</label>
+        <select th:field="*{showEmail}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Hiển thị avatar:</label>
+        <select th:field="*{showAvatar}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Hiển thị mô tả:</label>
+        <select th:field="*{showBio}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Hiển thị ngày sinh:</label>
+        <select th:field="*{showDob}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Nhận tin nhắn:</label>
+        <select th:field="*{allowSendMessage}">
+            <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level}">PUBLIC</option>
+        </select>
+    </div>
+
+
+    <div class="form-group-custom">
+        <label>Tìm kiếm qua email:</label>
+        <input type="checkbox" th:field="*{allowSearchByEmail}" />
+    </div>
+
+    <div class="form-group-custom">
+        <label>Tìm kiếm qua số điện thoại:</label>
+        <input type="checkbox" th:field="*{allowSearchByPhone}" />
+    </div>
+
+    <div class="form-group-custom">
+        <label>Nhận kết bạn:</label>
+        <input type="checkbox" th:field="*{allowFriendRequests}" />
+    </div>
+
+    <div class="form-group-custom">
+        <label>Cho phép tìm tài khoản:</label>
+        <input type="checkbox" th:field="*{canBeFound}"/>
+    </div>
+</div>

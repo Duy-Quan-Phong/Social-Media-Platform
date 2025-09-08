@@ -1,0 +1,71 @@
+
+<div th:fragment="content">
+    <div class="text-center mb-3">
+        <div class="avatar-wrapper"  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+            <!-- Nếu đã đăng nhập -->
+            <sec:authorize access="isAuthenticated()">
+                <img th:if="${#authentication.principal.avatarUrl != null
+                 and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                     th:src="@{${#authentication.principal.avatarUrl}}"
+                     alt="Avatar" class="profile-avatar avatar-preview"/>
+
+                <img th:unless="${#authentication.principal.avatarUrl != null
+                    and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                     th:src="@{/images/default-avatar.jpg}"
+                     alt="Avatar" class="profile-avatar avatar-preview"/>
+            </sec:authorize>
+
+
+            <div class="avatar-overlay">
+                <i class="fas fa-pen edit-icon"></i>
+            </div>
+
+            <input type="file" id="avatarFile" name="avatarFile" accept="image/*"
+                   onchange="showPreview(event);" class="avatar-file-input form-control">
+        </div>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Username</label>
+        <input type="text" class="form-control" th:field="*{username}" readonly>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Email</label>
+        <input type="email" class="form-control" th:field="*{email}"
+               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''">
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Họ</label>
+        <input type="text" class="form-control" th:field="*{lasttName}"
+               pattern="^[a-zA-Z\sÀ-ỹ]+$"
+               th:classappend="${#fields.hasErrors('lasttName')} ? 'is-invalid' : ''">
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('lasttName')}" th:errors="*{lasttName}"></div>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Tên</label>
+        <input type="text" class="form-control" th:field="*{firstName}"
+               pattern="^[a-zA-Z\sÀ-ỹ]+$"
+               th:classappend="${#fields.hasErrors('firstName')} ? 'is-invalid' : ''">
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Phone</label>
+        <input type="text" class="form-control" th:field="*{phone}"
+               pattern="^[0-9]{10,15}$"
+               th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid' : ''">
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+    </div>
+
+    <div class="form-group-custom">
+        <label>Thông tin</label>
+        <textarea class="form-control" th:field="*{bio}" rows="3"
+                  pattern="^[a-zA-Z0-9\s,.!?\-À-ỹ]*$"
+                  th:classappend="${#fields.hasErrors('bio')} ? 'is-invalid' : ''"></textarea>
+        <div class="invalid-feedback" th:if="${#fields.hasErrors('bio')}" th:errors="*{bio}"></div>
+    </div>
+</div>

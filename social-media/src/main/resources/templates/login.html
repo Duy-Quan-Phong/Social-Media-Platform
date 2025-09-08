@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Social Media</title>
+    <link rel="stylesheet" th:href="@{/css/login.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+<div class="container" id="container">
+
+    <!-- Form Đăng ký  -->
+    <div class="form-container sign-up">
+        <form th:action="@{/register}" method="post" th:object="${user}">
+            <h1>Tạo tài khoản</h1>
+
+            <div class="social-icons">
+                <a href="/oauth2/authorization/google" class="icon"><i class="fab fa-google-plus-g"></i></a>
+                <a href="/oauth2/authorization/facebook" class="icon"><i class="fab fa-facebook-f"></i></a>
+            </div>
+
+            <input type="text" th:field="*{firstName}" placeholder="Tên">
+            <span th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}" class="error-message"></span>
+
+            <input type="text" th:field="*{lastName}" placeholder="Họ">
+            <span th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}" class="error-message"></span>
+
+            <input type="text" th:field="*{username}" placeholder="Tên đăng nhập *">
+            <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error-message"></span>
+
+            <input type="email" th:field="*{email}" placeholder="Email *">
+            <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="error-message"></span>
+
+            <input type="text" th:field="*{phone}" placeholder="Số điện thoại">
+            <span th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}" class="error-message"></span>
+
+            <input type="date" th:field="*{dateOfBirth}" placeholder="Ngày sinh">
+            <span th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}" class="error-message"></span>
+
+            <input type="password" th:field="*{password}" placeholder="Mật khẩu *">
+            <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error-message"></span>
+
+            <input type="password" th:field="*{confirmPassword}" placeholder="Xác nhận mật khẩu *">
+            <span th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}" class="error-message"></span>
+
+            <button type="submit">Đăng ký</button>
+        </form>
+    </div>
+
+    <!-- Form Đăng nhập -->
+    <div class="form-container sign-in">
+        <form th:action="@{${loginAction}}" method="post">
+            <h1>Đăng nhập</h1>
+
+            <!-- Chỉ user thường mới thấy nút mạng xã hội -->
+            <div class="social-icons">
+                <a href="/oauth2/authorization/google" class="icon"><i class="fab fa-google-plus-g"></i></a>
+                <a href="/oauth2/authorization/facebook" class="icon"><i class="fab fa-facebook-f"></i></a>
+            </div>
+
+            <!-- Thông báo lỗi -->
+            <div th:if="${param.error}" class="alert alert-danger">
+                <span th:text="${param.error}"></span>
+            </div>
+
+            <div th:if="${param.logout}" class="alert alert-success">Đăng xuất thành công!</div>
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+            <input type="text" name="username" placeholder="Tên đăng nhập hoặc Email" required>
+            <input type="password" name="password" placeholder="Mật khẩu" required>
+
+            <a href="#">Quên mật khẩu?</a>
+            <button type="submit">Đăng nhập</button>
+
+            <p>Chưa có tài khoản? <a href="#" id="register-link">Đăng ký ngay</a></p>
+
+        </form>
+    </div>
+
+    <!-- Toggle panel (chỉ cho user thường) -->
+    <div class="toggle-container">
+        <div class="toggle">
+            <div class="toggle-panel toggle-left">
+                <h1>Chào mừng trở lại!</h1>
+                <p>Nhập thông tin cá nhân để sử dụng tất cả tính năng của trang web</p>
+                <button class="hidden" id="login">Đăng nhập</button>
+            </div>
+            <div  class="toggle-panel toggle-right">
+                <h1>Xin chào!</h1>
+                <p>Đăng ký với thông tin cá nhân để sử dụng tất cả tính năng của trang web</p>
+                <button class="hidden" id="register">Đăng ký</button>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const container = document.getElementById('container');
+    const registerBtn = document.getElementById('register');
+    const loginBtn = document.getElementById('login');
+    const registerLink = document.getElementById('register-link');
+
+    // Chuyển sang form đăng ký
+    registerBtn?.addEventListener('click', () => container.classList.add("active"));
+    registerLink?.addEventListener('click', () => container.classList.add("active"));
+
+    // Chuyển sang form đăng nhập
+    loginBtn?.addEventListener('click', () => container.classList.remove("active"));
+
+    // Nếu có lỗi ở form đăng ký thì mở sẵn form đăng ký
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.querySelector('.sign-up .error-message')) {
+            container.classList.add("active");
+        }
+    });
+
+    // Ẩn thông báo lỗi khi focus input
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('focus', () => {
+            const err = input.nextElementSibling;
+            if (err?.classList.contains('error-message')) {
+                err.style.display = 'none';
+            }
+        });
+    });
+</script>
+</body>
+</html>

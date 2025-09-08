@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif;
+}
+
+body {
+    /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
+    background: #f4f4f4;
+    min-height: 100vh;
+    color: #333;
+    margin-top: 5%;
+    position: relative;
+}
+
+
+:root {
+    --navbar-height: 56px; /* Chiều cao navbar Bootstrap mặc định */
+}
+
+.navbar-fixed-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.form-control {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Responsive: Điều chỉnh chiều cao navbar nếu cần */
+@media (max-width: 768px) {
+    :root {
+        --navbar-height: 48px;
+    }
+}

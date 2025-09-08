@@ -1,0 +1,625 @@
+
+.friend-item-enhanced {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 4px;
+}
+
+.friend-item-enhanced:hover {
+    background-color: #f2f2f2;
+}
+
+.friend-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+    position: relative;
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    background: #42b883;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+#onlineFriendsList,#groupChatsList{
+    height: 300px;
+    overflow-y: auto;
+}
+
+.friend-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sidebar h5 {
+    color: #65676b;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.like-btn.liked {
+    color: #3b7cfd;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+/* Profile avatar in sidebar */
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+    border: 3px solid #1877f2;
+}
+
+.user-profile {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.user-profile h4 {
+    margin: 10px 0 5px 0;
+    font-weight: 600;
+    color: #050505;
+}
+
+.user-role {
+    color: #65676b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.stats {
+    padding: 15px 0;
+}
+
+.stats p {
+    margin: 8px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stats i {
+    width: 16px;
+    color: #1877f2;
+}
+
+.divider {
+    border: none;
+    height: 1px;
+    background: #e4e6ea;
+    margin: 16px 0;
+}
+.main-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.sidebar, .feed, .post-creator, .post {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #1877f2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.post-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.post-content {
+    font-size: 1rem;
+    color: #050505;
+    margin-bottom: 1rem;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #ddd;
+    padding-top: 1rem;
+}
+
+.post-actions .action-btn {
+    background: none;
+    border: none;
+    color: #65676b;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.post-actions .action-btn:hover {
+    background-color: #f0f2f5;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+.btn:not(.btn-sm) {
+    background-color: #1877f2;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn:not(.btn-sm):hover {
+    background-color: #166fe5;
+}
+
+textarea.form-control {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    resize: none;
+    font-size: 1rem;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.message-notification .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.message-notification .notification-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.message-notification .notification-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #050505;
+}
+
+.message-notification .notification-message {
+    font-size: 13px;
+    color: #65676b;
+    margin-top: 2px;
+}
+
+.message-notification:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.creator-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+.post-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+.post-creator-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.creator-info {
+    flex: 1;
+}
+
+.creator-info span {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.privacy-select {
+    border: none;
+    background: #f0f2f5;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #65676b;
+}
+/* Thêm vào news-feed.css */
+
+/* Group Chat Items Styling */
+.group-item-enhanced {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 6px;
+    gap: 12px;
+}
+
+.group-item-enhanced:hover {
+    background-color: #f2f2f2;
+}
+
+.group-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px; /* Square-ish for groups */
+    object-fit: cover;
+    position: relative;
+    border: 2px solid #e4e6ea;
+}
+
+.group-member-count {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    background: #1877f2;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    min-width: 16px;
+}
+
+.group-info {
+    flex: 1;
+    min-width: 0; /* Allow text truncation */
+}
+
+.group-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #050505;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.group-last-message {
+    font-size: 12px;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 1px;
+}
+
+.group-time {
+    font-size: 11px;
+    color: #8a8d91;
+}
+
+/* Group Section Header */
+.sidebar h5 {
+    color: #65676b;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Loading and Empty States */
+#groupChatsList .text-center {
+    padding: 16px 8px;
+    color: #8a8d91;
+    font-size: 13px;
+}
+
+#groupChatsList .fa-spinner {
+    color: #1877f2;
+    margin-bottom: 4px;
+}
+
+/* Active Group Indicator */
+.group-item-enhanced.active {
+    background-color: #e7f3ff;
+}
+
+.group-item-enhanced.active .group-name {
+    color: #1877f2;
+    font-weight: 700;
+}
+
+/* Unread Message Indicator */
+.group-unread-indicator {
+    width: 8px;
+    height: 8px;
+    background: #ff3040;
+    border-radius: 50%;
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    border: 2px solid white;
+}
+
+/* Online Indicator for Groups (if any members online) */
+.group-online-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: 16px;
+    width: 8px;
+    height: 8px;
+    background: #31c24b;
+    border: 1px solid white;
+    border-radius: 50%;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .group-item-enhanced {
+        padding: 8px 10px;
+        gap: 10px;
+    }
+
+    .group-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .group-member-count {
+        width: 14px;
+        height: 14px;
+        font-size: 9px;
+    }
+}
+/* Custom styles to match the provided image */
+:root {
+    --sidebar-bg: #f0f2f5;
+    --main-bg: #ffffff;
+    --text-primary: #050505;
+    --text-secondary: #65676b;
+    --divider: #e4e6eb;
+    --hover-bg: #f2f2f2;
+    --active-bg: #e5e7eb;
+}
+
+body {
+    background-color: var(--main-bg);
+    font-family: Segoe UI, Helvetica, Arial, sans-serif;
+    color: var(--text-primary);
+}
+
+.main-container {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 60px); /* full chiều cao trừ header */
+    margin-top: 0;              /* bỏ khoảng cách thừa */
+    padding-top: 0;             /* bỏ padding trên */
+}
+
+.nav-sidebar {
+    width: 280px;
+    background: #ffffff;
+    padding: 15px;
+    height: calc(100vh - 60px);
+    position: sticky;
+    top: 60px; /* bám ngay dưới header */
+    overflow-y: auto;
+}
+
+
+.nav-sidebar h3 {
+    font-size: 17px;
+    margin: 15px 0 10px;
+    padding-left: 10px;
+    color: var(--text-secondary);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.nav-item:hover {
+    background-color: var(--hover-bg);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.nav-item i {
+    margin-right: 10px;
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+/* Main Content */
+.feed {
+    flex: 1;
+    height: calc(100vh - 60px);
+    overflow-y: auto; /* nếu muốn feed có scroll riêng */
+    background: #ffffff;
+}
+
+/* Right Sidebar */
+.sidebar {
+    width: 300px;
+    background: #ffffff;
+    padding: 15px;
+    height: calc(100vh - 60px);
+    position: sticky;
+    top: 60px; /* bám ngay dưới header */
+    overflow-y: auto;
+}
+
+.sidebar h5 {
+    font-size: 16px;
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    padding-left: 5px;
+}
+
+.divider {
+    border-top: 1px solid var(--divider);
+    margin: 15px 0;
+}
+
+/* User profile in sidebar */
+.user-profile {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.user-profile .avatar {
+    margin-right: 10px;
+}
+
+.user-profile h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.user-role {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Stats section */
+.stats p {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+}
+
+.stats i {
+    margin-right: 10px;
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+/* Contact list */
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.contact-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.contact-item .avatar {
+    margin-right: 10px;
+}
+
+/* Group item */
+.group-item {
+    padding: 10px;
+    border-radius: 8px;
+}
+
+/* Header adjustments */
+header {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Post adjustments */
+.post {
+    background: var(--main-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+    padding: 15px;
+}

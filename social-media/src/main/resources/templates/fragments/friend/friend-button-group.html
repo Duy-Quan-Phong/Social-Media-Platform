@@ -1,0 +1,56 @@
+<!-- fragments/friend-button-group.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="buttonGroup(username, friendshipStatus, isSender, isReceiver, allowFriendRequests,addMargin)">
+
+    <div id="acceptedBtnGroup" th:classappend="${friendshipStatus != 'ACCEPTED'} ? 'd-none'" class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" th:id="'friendDropdownBtn-' + ${username}"
+                data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa-solid fa-user-check"></i> Bạn bè
+        </button>
+        <ul class="dropdown-menu" th:aria-labelledby="'friendDropdownBtn-' + ${username}" >
+            <li>
+                <button class="btn btn-danger deleteFriendBtn"  th:data-username="${username}">
+                    <i class="fa-solid fa-user-xmark"></i> Hủy kết bạn
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div id="pendingBtnGroup" th:classappend="${friendshipStatus != 'PENDING'} ? 'd-none'">
+        <div th:if="${isSender}">
+            <button class="btn btn-warning cancelFriendRequestBtn" th:data-username="${username}">
+                <i class="fa-solid fa-user-minus"></i> Hủy lời mời
+            </button>
+        </div>
+        <div th:if="${isReceiver}">
+            <button class="btn btn-success acceptFriendBtn"  th:data-username="${username}">
+                <i class="fa-solid fa-user-check"></i> Chấp nhận
+            </button>
+            <button class="btn btn-danger  reflectFriendBtn"  th:classappend="${addMargin} ? 'mt-3' : ''" th:data-username="${username}">
+                <i class="fa-solid fa-user-xmark"></i> Từ chối
+            </button>
+        </div>
+    </div>
+
+    <div id="noneBtnGroup">
+        <!-- Hiển thị nút "Thêm bạn" khi friendshipStatus là NONE và allowFriendRequests là true -->
+        <button th:if="${friendshipStatus == 'NONE' and allowFriendRequests}"
+                class="btn btn-success addFriendBtn"
+                th:data-username="${username}">
+            <i class="fa-solid fa-user-plus"></i> Thêm bạn
+        </button>
+
+        <!-- Hiển thị nút disabled "Không thể kết bạn" khi friendshipStatus là NONE và allowFriendRequests là false -->
+        <button th:if="${friendshipStatus == 'NONE' and !allowFriendRequests}"
+                class="btn btn-secondary"
+                disabled>
+            <i class="fa-solid fa-ban"></i> Kết bạn
+        </button>
+    </div>
+
+</div>
+
+</body>
+</html>

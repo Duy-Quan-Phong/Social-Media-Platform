@@ -1,0 +1,514 @@
+<!-- Cập nhật file profile/view.html để tích hợp posts -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${user.firstName + ' ' + user.lastName + ' | Hồ sơ cá nhân'}">Trang cá nhân</title>
+    <link rel="stylesheet" th:href="@{/css/view_profile.css}">
+    <link rel="stylesheet" th:href="@{/css/friend_card.css}">
+    <link rel="stylesheet" th:href="@{/css/post.css}">
+    <link rel="stylesheet" th:href="@{/css/chat.css}">
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <meta name="user-id" th:content="${#authentication.principal.id}">
+</head>
+<body>
+
+<!-- HEADER -->
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<!-- COVER IMAGE + AVATAR -->
+<div class="cover-container">
+    <img class="cover-image" th:src="@{/images/default-avatar.jpg}" alt="Ảnh bìa">
+    <div class="avatar-container">
+        <img class="avatar"
+             th:if="${user.profilePicture != null and !#strings.isEmpty(user.profilePicture)}"
+             th:src="@{${user.profilePicture}}" alt="Avatar">
+        <img class="avatar"
+             th:unless="${user.profilePicture != null and !#strings.isEmpty(user.profilePicture)}"
+             th:src="@{/images/default-avatar.jpg}" alt="Avatar">
+        <div class="user-name" th:text="${user.firstName + ' ' + user.lastName}">Tên người dùng</div>
+        <div class="button-group" th:if="${!isOwner}">
+            <div th:insert="fragments/friend/friend-button-group :: buttonGroup(${user.username}, ${friendshipStatus}, ${isSender}, ${isReceiver}, ${allowFriendRequests},false)"></div>
+
+            <!-- Enhanced Message Button -->
+            <button th:if="${canSendMessage}"
+                    class="enhanced-message-btn"
+                    th:id="'profileMessageBtn-' + ${user.id}"
+                    th:data-user-id="${user.id}"
+                    th:data-user-name="${user.firstName + ' ' + user.lastName}"
+                    th:data-user-avatar="${user.profilePicture}"
+                    onclick="openChatFromButton(this)">
+                <i class="fas fa-comment-dots"></i>
+                <span>Nhắn tin</span>
+                <!-- Notification badge (hidden by default) -->
+                <span class="message-notification-badge"
+                      th:id="'messageBadge-' + ${user.id}"
+                      style="display: none;">3</span>
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- NAVIGATION TABS -->
+<div class="profile-tabs">
+    <a th:href="@{'/profile/' + ${user.username} + '?filter=posts'}"
+       th:classappend="${filter == 'posts'} ? 'active' : ''"
+       class="tab">
+        <i class="fas fa-edit"></i> Bài viết
+    </a>
+    <a th:href="@{'/profile/' + ${user.username} + '?filter=photos'}"
+       th:classappend="${filter == 'photos'} ? 'active' : ''"
+       class="tab">
+        <i class="fas fa-images"></i> Ảnh
+    </a>
+    <a th:href="@{'/profile/' + ${user.username} + '?filter=all'}"
+       th:classappend="${filter == 'all'} ? 'active' : ''"
+       class="tab"
+       th:if="${canViewFriendList}">
+        <i class="fas fa-users"></i> Bạn bè
+    </a>
+    <a th:href="@{'/profile/' + ${user.username} + '?filter=mutual'}"
+       th:classappend="${filter == 'mutual'} ? 'active' : ''"
+       class="tab"
+       th:if="${!isOwner and mutualFriendsCount>0}">
+        <i class="fas fa-user-friends"></i> Bạn chung
+    </a>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="profile-page-container d-flex">
+    <!-- CỘT TRÁI: Thông tin người dùng -->
+    <div th:if="${filter == 'posts' or filter == 'photos' }" class="profile-left-column">
+        <div class="card-box profile-content">
+            <h2><i class="fas fa-info-circle"></i> Thông tin cá nhân</h2>
+            <div class="info-item" th:if="${canViewEmail}">
+                <strong><i class="fas fa-envelope"></i> Email:</strong>
+                <span th:text="${user.email}">email@example.com</span>
+            </div>
+            <div class="info-item" th:if="${canViewPhone}">
+                <strong><i class="fas fa-phone"></i> Số điện thoại:</strong>
+                <span th:text="${user.phone}">0123456789</span>
+            </div>
+            <div class="info-item" th:if="${canViewDob}">
+                <strong><i class="fas fa-birthday-cake"></i> Sinh nhật:</strong>
+                <span th:text="${user.dateOfBirth}">01/01/1990</span>
+            </div>
+            <div class="info-item" th:if="${canViewBio}">
+                <strong><i class="fas fa-user-edit"></i> Giới thiệu:</strong><br>
+                <textarea readonly rows="5" style="width: 100%; border: none; background: #f8f9fa; padding: 8px; border-radius: 4px;" th:text="${user.bio}">...</textarea>
+            </div>
+            <div th:if="${isOwner}" class="profile-actions">
+                <a th:href="@{/setting}" class="btn btn-outline-primary">
+                    <i class="fas fa-edit"></i> Chỉnh sửa hồ sơ
+                </a>
+            </div>
+        </div>
+
+        <div class="card-box profile-content" th:if="${canViewFriendList or mutualFriendsCount>0}">
+            <h2><i class="fas fa-users"></i> Thông tin bạn bè</h2>
+            <div th:if="${canViewFriendList}" class="mb-2">
+                <i class="fas fa-user-friends"></i> Bạn bè:
+                <strong th:text="${friendCount}"></strong>
+            </div>
+            <div th:if="${!isOwner and mutualFriendsCount>0}" class="mb-3">
+                <i class="fas fa-users"></i> Bạn chung:
+                <strong th:text="${mutualFriendsCount}"></strong>
+            </div>
+            <div class="row">
+                <div class="col-md-4" th:each="friend, iterStat : ${friends}" th:if="${iterStat.index} < 9">
+                    <th:block
+                            th:insert="~{fragments/friend/friendCard :: friendCard(friend=${friend}, nameClass='name-profile')}">
+                    </th:block>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CỘT PHẢI: Nội dung dựa trên filter -->
+    <div class="card-box posts-container" th:if="${filter == 'posts'}">
+        <span th:if="${isOwner}">
+            <div th:replace="fragments/post/post-form :: create-post-form"></div>
+        </span>
+        <!-- Posts Feed -->
+        <div id="posts-container" th:data-username="${user.username}">
+            <!-- Posts will be loaded here dynamically -->
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="profile-loading-indicator" class="text-center py-3" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+
+        <!-- No posts message -->
+        <div id="profile-no-posts" class="text-center py-5 text-muted" style="display: none;">
+            <div class="mb-3">
+                <i class="fas fa-edit fa-3x"></i>
+            </div>
+            <h5>Chưa có bài viết nào</h5>
+            <p th:if="${isOwner}">Hãy chia sẻ suy nghĩ đầu tiên của bạn!</p>
+            <p th:unless="${isOwner}" th:text="${user.firstName + ' chưa đăng bài viết nào.'}"></p>
+        </div>
+    </div>
+
+    <!-- Photos tab -->
+    <div class="card-box posts-container" th:if="${filter == 'photos'}">
+        <h2><i class="fas fa-images"></i> Ảnh</h2>
+        <div id="profile-photos-container" th:data-username="${user.username}">
+            <!-- Lightbox overlay -->
+
+            <!-- Photos will be loaded here -->
+        </div>
+
+        <div id="photos-loading" class="text-center py-3" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+
+        <div id="no-photos" class="text-center py-5 text-muted" style="display: none;">
+            <div class="mb-3">
+                <i class="fas fa-camera fa-3x"></i>
+            </div>
+            <h5>Chưa có ảnh nào</h5>
+            <p th:if="${isOwner}">Hãy thêm ảnh vào bài viết để hiển thị tại đây!</p>
+            <p th:unless="${isOwner}" th:text="${user.firstName + ' chưa có ảnh nào.'}"></p>
+        </div>
+    </div>
+    <div id="lightbox-overlay">
+        <span id="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="" alt="Full Photo">
+    </div>
+    <!-- Bạn bè -->
+    <div class="card-box profile-content" th:if="${filter == 'all' or filter == 'mutual' }">
+        <input type="hidden" id="targetUserId" th:value="${targetUserId}"/>
+        <input type="hidden" id="filterValue" th:value="${filter}"/>
+        <div class="row" id="friends-list">
+            <div class="col-md-3" th:each="friend : ${friends}">
+                <th:block
+                        th:insert="~{fragments/friend/friendCard :: friendCard(friend=${friend}, nameClass='name-list-friend')}">
+                </th:block>
+            </div>
+        </div>
+        <div class="loading" id="loading">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+    </div>
+</div>
+
+
+<!-- Post Search Modal (for posts tab) -->
+<div class="modal fade" id="searchPostsModal" tabindex="-1" th:if="${filter == 'posts'}">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-search"></i> Tìm kiếm bài viết
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="post-search-input" class="form-control"
+                           placeholder="Nhập từ khóa tìm kiếm...">
+                </div>
+                <div id="search-results-container">
+                    <!-- Search results will appear here -->
+                </div>
+                <div id="search-loading" class="text-center py-3" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm...
+                </div>
+                <div id="no-search-results" class="text-center py-3 text-muted" style="display: none;">
+                    <i class="fas fa-search"></i> Không tìm thấy bài viết nào
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<span th:if="${isOwner}">
+    <div th:replace="fragments/post/post-form :: edit-post-form"></div>
+</span>
+
+<!-- Add search button for posts tab -->
+<div th:if="${filter == 'posts'}" class="floating-search-btn">
+    <button class="btn btn-primary rounded-circle" data-bs-toggle="modal" data-bs-target="#searchPostsModal">
+        <i class="fas fa-search"></i>
+    </button>
+</div>
+
+<script type="module" th:src="@{/js/post.js}"></script>
+<script type="module" th:src="@{/js/profile-posts.js}"></script>
+<script th:src="@{/js/load-friend.js}"></script>
+<script th:src="@{/js/friend-button.js}"></script>
+<script th:src="@{/js/chat.js}"></script>
+
+<script th:inline="javascript">
+    function openChatFromButton(btn) {
+        const id = btn.dataset.userId;
+        const name = btn.dataset.userName;
+        const avatar = btn.dataset.userAvatar;
+        openChat(id, name, avatar, "private");
+    }
+
+    /*<![CDATA[*/
+
+    // Enhanced Profile Interactions
+    class ProfileEnhancements {
+        constructor() {
+            this.init();
+        }
+
+        init() {
+            this.enhanceButtons();
+            this.addHoverEffects();
+            this.addScrollEffects();
+            this.initLazyLoading();
+        }
+
+        enhanceButtons() {
+            // Add ripple effect to buttons
+            document.querySelectorAll('.btn').forEach(button => {
+                button.addEventListener('click', this.createRipple);
+            });
+        }
+
+        createRipple(e) {
+            const button = e.currentTarget;
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+
+            ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        `;
+
+            if (!document.querySelector('#ripple-style')) {
+                const style = document.createElement('style');
+                style.id = 'ripple-style';
+                style.textContent = `
+                @keyframes ripple {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+                document.head.appendChild(style);
+            }
+
+            button.style.position = 'relative';
+            button.style.overflow = 'hidden';
+            button.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        addHoverEffects() {
+            // Enhanced hover effects for profile elements
+            document.querySelectorAll('.info-item').forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(5px)';
+                    this.style.transition = 'transform 0.3s ease';
+                });
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                });
+            });
+        }
+
+        addScrollEffects() {
+            // Scroll reveal animation
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.card-box, .info-item').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        }
+
+        initLazyLoading() {
+            // Lazy loading for images
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.classList.add('loaded');
+                            imageObserver.unobserve(img);
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+        }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize profile enhancements
+        new ProfileEnhancements();
+
+        // Add loading animation
+        const profileContainer = document.querySelector('.profile-page-container');
+        if (profileContainer) {
+            profileContainer.style.opacity = '0';
+            setTimeout(() => {
+                profileContainer.style.transition = 'opacity 0.8s ease';
+                profileContainer.style.opacity = '1';
+            }, 100);
+        }
+
+        // Enhanced tab switching
+        document.querySelectorAll('.profile-tabs .tab').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                // Add loading effect
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            `;
+                loadingOverlay.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i>';
+                document.body.appendChild(loadingOverlay);
+
+                // Remove after navigation starts
+                setTimeout(() => loadingOverlay.remove(), 100);
+            });
+        });
+
+        // WebSocket integration for real-time chat
+        if (typeof stompClient !== 'undefined' && stompClient && window.profileChat) {
+            const userId = window.profileChat.userId;
+            if (userId) {
+                // Subscribe to personal message queue
+                stompClient.subscribe(`/user/${userId}/queue/messages`, function(message) {
+                    const messageData = JSON.parse(message.body);
+                    if (window.profileChat) {
+                        window.profileChat.receiveMessage(
+                            messageData.content,
+                            messageData.senderName,
+                            messageData.senderAvatar
+                        );
+                    }
+                });
+            }
+        }
+    });
+
+    // Global function for external integration
+    window.openProfileChat = function() {
+        if (window.profileChat) {
+            window.profileChat.openChat();
+        }
+    };
+
+    // Error handling
+    window.addEventListener('error', function(e) {
+        console.error('Profile page error:', e.error);
+    });
+    document.addEventListener("DOMContentLoaded", () => {
+        const photosContainer = document.getElementById("profile-photos-container");
+        if (!photosContainer) return;
+
+        const username = photosContainer.dataset.username;
+        const loadingIndicator = document.getElementById("photos-loading");
+        const noPhotos = document.getElementById("no-photos");
+        const lightboxOverlay = document.getElementById("lightbox-overlay");
+        const lightboxImg = document.getElementById("lightbox-img");
+        const lightboxClose = document.getElementById("lightbox-close");
+
+        // Close lightbox
+        lightboxClose.addEventListener("click", () => {
+            lightboxOverlay.style.display = "none";
+            lightboxImg.src = "";
+        });
+
+        // Click vào thumbnail mở lightbox
+        photosContainer.addEventListener("click", (e) => {
+            if (e.target.tagName === "IMG") {
+                lightboxImg.src = e.target.src;
+                lightboxOverlay.style.display = "flex";
+            }
+        });
+
+        loadingIndicator.style.display = 'block';
+        console.log("Fetching photos for:", username);
+        fetch(`/${username}/photos`)
+            .then(res => res.json())
+            .then(data => {
+                console.log("Data received:", data);
+                loadingIndicator.style.display = 'none';
+
+                if (data.length === 0) {
+                    noPhotos.style.display = 'block';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const urls = JSON.parse(item); // ["url"]
+                    urls.forEach(url => {
+                        if (url.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
+                            const img = document.createElement('img');
+                            img.src = url;
+                            img.alt = "Photo";
+                            img.className = "profile-photo-thumb";
+                            photosContainer.appendChild(img);
+                        } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+                            const video = document.createElement('video');
+                            video.src = url;
+                            video.controls = true;
+                            video.className = "profile-photo-thumb";
+                            photosContainer.appendChild(video);
+                        }
+                    });
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                loadingIndicator.style.display = 'none';
+                noPhotos.style.display = 'block';
+            });
+    });
+
+
+    /*]]>*/
+</script>
+
+</body>
+</html>

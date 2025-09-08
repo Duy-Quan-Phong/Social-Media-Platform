@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách bạn bè</title>
+    <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/friend_card.css}">
+</head>
+<body>
+<div th:replace="~{fragments/common/header :: header}"></div>
+<div class="container my-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="sidebar sticky-top" style="top: 70px;">
+                <h2>Lựa chọn</h2>
+                <div class="list-group list-group-flush">
+                    <a th:class="'list-group-item list-group-item-action ' + (${filter == 'non-friends'} ? 'active' : '')"
+                       th:href="@{/friends(filter='non-friends')}">Trang chủ</a>
+                    <a th:class="'list-group-item list-group-item-action ' + (${filter == 'all'} ? 'active' : '')"
+                       th:href="@{/friends(filter='all')}">Tất cả bạn bè</a>
+                    <a th:class="'list-group-item list-group-item-action ' + (${filter == 'sent-requests'} ? 'active' : '')"
+                       th:href="@{/friends(filter='sent-requests')}">Lời mời đã gửi</a>
+                    <a th:class="'list-group-item list-group-item-action ' + (${filter == 'received-requests'} ? 'active' : '')"
+                       th:href="@{/friends(filter='received-requests')}">Lời mời nhận được</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danh sách bạn bè -->
+        <div class="col-md-9">
+            <input type="hidden" id="filterValue" th:value="${filter}" />
+            <input type="hidden" id="targetUserId" th:value="${targetUserId}" />
+
+            <h2 id="list-title" th:text="${listTitle}">Danh sách bạn bè</h2>
+            <div class="row" id="friends-list">
+                <div th:each="friend : ${friends}" class="col-md-3">
+                    <div class="friend-action">
+                        <th:block th:replace="~{fragments/friend/friendCard :: friendCard(friend=${friend}, nameClass='name-list-friend')}"></th:block>
+                        <th:block th:replace="fragments/friend/friend-button-group :: buttonGroup(${friend.username}, ${friendshipStatus}, ${isSender}, ${isReceiver}, ${friend.allowFriendRequests},true)"></th:block>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i> Đang tải...
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="fragments/chat-fragment :: chatContainers"></div>
+
+<script th:src="@{/js/load-friend.js}"></script>
+<script th:src="@{/js/friend-button.js}"></script>
+
+</body>
+</html>

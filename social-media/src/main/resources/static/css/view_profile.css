@@ -1,0 +1,343 @@
+/* === COVER & AVATAR === */
+.cover-container {
+    position: relative;
+    height: 300px;
+    background-color: #d8d8d8;
+}
+
+.cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid #fff;     /* viền trắng giống FB */
+    display: block;
+    margin: 0 auto;             /* căn avatar ra giữa */
+}
+
+.avatar-container {
+    position: absolute;
+    bottom: -60px;
+    left: 40px;
+    display: flex;
+    /*flex-direction: column;*/
+    align-items: flex-start;
+    /*align-items: center;*/
+    gap: 20px; /* khoảng cách giữa avatar và thông tin */
+}
+
+.user-info {
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 100px;
+}
+
+.user-name {
+    margin-top: 10px;           /* cách avatar một đoạn */
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;         /* căn chữ ra giữa avatar */
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap:10px
+}
+
+.user-name, .button-group {
+    margin-top: auto; /* Đẩy các phần tử này xuống dưới nếu cần thêm khoảng cách */
+    margin-bottom: 15px;
+}
+
+/* Cột bên trái chứa thông tin cá nhân + bạn bè */
+.profile-left-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Cột bên phải chứa bài viết */
+.posts-container {
+    flex: 2;
+}
+
+
+/* === TABS === */
+.profile-tabs {
+    margin-top: 120px;
+    background-color: white;
+    padding: 10px 40px;
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.tab {
+    text-decoration: none;
+    color: #333;
+    padding: 10px;
+}
+
+.tab.active {
+    font-weight: bold;
+    border-bottom: 2px solid #1876f2;
+    color: #1876f2;
+}
+
+/* === LAYOUT 2 CỘT === */
+.profile-page-container {
+    gap: 20px;
+    padding: 30px 40px;
+    align-items: flex-start;
+}
+
+.card-box {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* === USER INFO (LEFT) === */
+.profile-content {
+    flex: 1;
+    width: 100%;
+}
+
+/* === POSTS (RIGHT) === */
+.posts-container {
+    flex: 2;
+}
+
+
+
+.info-item {
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.profile-actions {
+    margin-top: 20px;
+}
+
+.profile-actions .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #1876f2;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+.enhanced-message-btn{
+    background-color: #1876f2;
+    color: white;border-radius: 5px;text-decoration: none;
+}
+
+
+.post-card {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.post-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+}
+
+.post-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.post-username {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.post-time {
+    font-size: 12px;
+    color: gray;
+}
+
+.post-content {
+    font-size: 15px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+}
+
+
+/* Responsive: mobile vẫn đẹp */
+@media (max-width: 768px) {
+    .friend-container {
+        grid-template-columns: repeat(2, 1fr); /* 2 cột khi nhỏ */
+    }
+}
+
+@media (max-width: 480px) {
+    .friend-container {
+        grid-template-columns: repeat(1, 1fr); /* 1 cột */
+    }
+
+    .friend-avatar {
+        width: 60px;
+        height: 60px;
+    }
+
+    .friend-name {
+        font-size: 14px;
+    }
+}
+
+button {
+    padding: 5px 25px;
+    border-radius: 20px;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+     box-sizing: border-box;
+}
+
+ .floating-search-btn {
+     position: fixed;
+     bottom: 20px;
+     left: 20px;
+     z-index: 1000;
+ }
+
+.floating-search-btn button {
+    width: 56px;
+    height: 56px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.floating-search-btn button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+#profile-photos-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.photo-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.photo-item:hover {
+    transform: scale(1.02);
+}
+
+.photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Enhanced loading states */
+.loaded {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Better responsive design */
+@media (max-width: 768px) {
+    .floating-search-btn {
+        bottom: 80px;
+    }
+
+    #profile-photos-container {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .enhanced-button-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .enhanced-button-group > * {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .profile-page-container {
+        flex-direction: column;
+    }
+
+    .profile-left-column {
+        margin-bottom: 20px;
+    }
+}
+
+/* Enhanced info items */
+.info-item {
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border-left: 4px solid #1877f2;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    background: #e3f2fd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced profile tabs */
+.profile-tabs .tab {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-tabs .tab:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(24, 119, 242, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.profile-tabs .tab:hover:before {
+    left: 100%;
+}
+
+.profile-tabs .tab.active {
+    background: rgba(24, 119, 242, 0.1);
+}

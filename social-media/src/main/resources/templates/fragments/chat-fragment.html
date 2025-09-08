@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="chatResources">
+    <!-- Chat CSS -->
+    <link rel="stylesheet" th:href="@{/css/chat.css}">
+    <!-- Chat JS -->
+    <script th:src="@{/js/chat.js}" defer></script>
+    <meta name="user-id" th:content="${#authentication.principal.id}">
+</head>
+
+<body th:fragment="chatContainers">
+<!-- Chat Containers -->
+<div class="chat-bubbles-container" id="chatBubblesContainer">
+    <!-- Chat bubbles will be added here -->
+</div>
+<div class="chat-windows-container" id="chatWindowsContainer">
+    <!-- Chat windows will be added here -->
+</div>
+</body>
+</html>
