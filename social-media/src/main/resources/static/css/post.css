@@ -827,12 +827,11 @@ video:-ms-fullscreen {
 
 .line-reply {
     position: absolute;  /* Changed to absolute for precise positioning relative to wrapper */
-    width: 30px;
+    width: 27px;
     left: -27px;
     height: 3px;  /* Thickness of the line */
-    background-color: red;  /* Use background-color instead of color */
+    background-color: #000;  /* Use background-color instead of color */
     z-index: 5;
-    /* top is set dynamically in JS */
 }
 
 .comment-card.reply {

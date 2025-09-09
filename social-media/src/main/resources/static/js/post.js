@@ -1007,7 +1007,6 @@ class PostManager {
             }
             c.replies.forEach(reply => this.appendCommentToUI(postId, reply, 'append', c.commentId));
 
-            // New: After all replies are appended, calculate and set the vertical line height dynamically
             const repliesHeight = $repliesGroup.outerHeight();
             const verticalHeight = repliesHeight - 43;  // Extend upward by the top offset amount
             $repliesGroup.find('.vertical-line').css('height', verticalHeight + 'px');
@@ -1192,7 +1191,7 @@ class PostManager {
             </button>
         </div>
     `);
-        $replyContainer.append($replyBox);
+        $replyContainer.prepend($replyBox);
     }
 
     submitReply(postId, parentCommentId, btn) {
