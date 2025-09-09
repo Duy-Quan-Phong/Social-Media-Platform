@@ -1126,12 +1126,11 @@ class PostManager {
         submitBtn.disabled = true;
 
         try {
-
             // Gửi lên server
             const response = await fetch(`api/comments/add`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({postId, content, mentions: []})
+                body: JSON.stringify({postId, content, mentions: mentionsByPost[postId]})
             });
             console.log('Response status:', response.status);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1313,11 +1312,12 @@ class PostManager {
             postsCountEl.textContent = currentCount + 1;
         }
     }
+
     showMentionSuggestions(postId, inputElement) {
         const value = inputElement.value;
         const lastWord = value.split(" ").pop();
         const dropdown = document.querySelector(`#mentions-dropdown-${postId}`);
-        if (!lastWord.startsWith("@")){
+        if (!lastWord.startsWith("@")) {
             dropdown.style.display = "none";
         }
         if (lastWord.startsWith("@")) {
@@ -1351,7 +1351,9 @@ class PostManager {
 
     }
 }
+
 let mentionsByPost = {};
+
 function addMention(postId, user, inputElement) {
     // replace từ @abc thành @username
     inputElement.value = inputElement.value.replace(/@\S*$/, `@${user.fullName} `);
@@ -1367,6 +1369,7 @@ function addMention(postId, user, inputElement) {
     const dropdown = document.querySelector(`#mentions-dropdown-${postId}`);
     dropdown.style.display = "none";
 }
+
 let stompClient = null;
 // Initialize PostManager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {

@@ -4,7 +4,6 @@ import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
 import com.codegym.socialmedia.repository.IUserRepository;
-import com.codegym.socialmedia.repository.comment.CommentMentionRepository;
 import com.codegym.socialmedia.repository.comment.LikeCommentRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;
@@ -16,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +25,7 @@ import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PostCommentServiceImpl implements PostCommentService {
     private final IUserRepository userRepository;
     private final PostCommentRepository postCommentRepository;
@@ -33,7 +34,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     private final PostMessage postMessage;
     private final NotificationService notificationService;
     private final FriendshipService friendshipService;
-    private final CommentMentionRepository commentMentionRepository;
+
     @Override
     public PostComment addComment(Long postId, User user, String content, List<Long> mentionIds) {
         Post post = postRepository.findById(postId)
@@ -54,13 +55,10 @@ public class PostCommentServiceImpl implements PostCommentService {
 
             // ✅ Lưu mentions nếu có
             if (mentionIds != null && !mentionIds.isEmpty()) {
-                List<User> mentionedUsers = userRepository.findAllById(mentionIds);
-
-                for (User mentionedUser : mentionedUsers) {
-
+                for (long mentionedUserId : mentionIds) {
                     notificationService.notify(
                             user.getId(),
-                            mentionedUser.getId(),
+                            mentionedUserId,
                             Notification.NotificationType.MENTION_COMMENT,
                             Notification.ReferenceType.COMMENT,
                             savedComment.getId()
