@@ -7,6 +7,7 @@ class ChatManager {
         this.chatBubbles = new Map();
         this.conversationCache = new Map();
         this.pendingFiles = {};
+        this.subscriptions = new Map(); //  Track subscriptions per conversation
         this.maxChats = 3;
         this.maxBubbles = 4;
         this.compactBubbleId = 'chat-bubble-compact';
@@ -134,10 +135,16 @@ class ChatManager {
             console.warn('Stomp client not connected');
             return;
         }
-        stompClient.subscribe(`/topic/conversation/${conversationId}`, (message) => {
+        // Avoid duplicate subscriptions if already subscribed
+        if (this.subscriptions.has(conversationId)) {
+            console.log(`Already subscribed to conversation ${conversationId}`);
+            return;
+        }
+        const sub = stompClient.subscribe(`/topic/conversation/${conversationId}`, (message) => {
             const messageData = JSON.parse(message.body);
             this.handleIncomingMessage(messageData);
         });
+        this.subscriptions.set(conversationId, sub); // Store the subscription
     }
 
     async findOrCreateConversation(targetUserId) {
@@ -257,6 +264,14 @@ class ChatManager {
             this.chatBubbles.delete(id);
         }
         if (this.pendingFiles[id]) delete this.pendingFiles[id];
+
+        // Unsubscribe from the conversation topic
+        const sub = this.subscriptions.get(id);
+        if (sub) {
+            sub.unsubscribe();
+            this.subscriptions.delete(id);
+        }
+
         this.updateBubblesCompact();
     }
 
