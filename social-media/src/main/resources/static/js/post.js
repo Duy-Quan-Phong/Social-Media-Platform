@@ -954,7 +954,7 @@ class PostManager {
 ` : '';
 
         const $card = $(`
-    <div style="position: relative; max-width: 100%; overflow: hidden;" class="comment-card d-flex" id="comment-${c.commentId}" data-comment-id="${c.commentId}">
+    <div style="position: relative; max-width: 100%; overflow: hidden;" class="comment-card d-flex ${parentId ? 'reply' : ''}" id="comment-${c.commentId}" data-comment-id="${c.commentId}">
         ${actionButtons} 
         <img src="${c.userAvatarUrl || '/images/default-avatar.jpg'}" alt="avatar" class="comment-avatar">
         <div class="comment-body">
@@ -976,26 +976,29 @@ class PostManager {
                 </button>` : ''}
                 
             </div>
-            <div class="replies" id="replies-${c.commentId}"></div>
         </div>
     </div>
 `);
 
-        if (parentId) {
-            $(`#replies-${parentId}`).append($card);
+        const $container = $(`#comments-list-${postId}`);
+        let $target = parentId ? $(`#replies-group-${parentId}`) : $container;
+
+        if (type === 'pre') {
+            $target.prepend($card);
         } else {
-            const $container = $(`#comments-list-${postId}`);
-            if (type === 'pre') $container.prepend($card);
-            else $container.append($card);
+            $target.append($card);
         }
 
-        // render replies con
-        if (c.replies && c.replies.length > 0) {
+        // Nếu là comment cha và có replies, tạo replies-group và render replies
+        if (!parentId && c.replies && c.replies.length > 0) {
+            let $repliesGroup = $(`#replies-group-${c.commentId}`);
+            if ($repliesGroup.length === 0) {
+                $repliesGroup = $(`<div class="replies-group" id="replies-group-${c.commentId}"></div>`);
+                $card.after($repliesGroup);
+            }
             c.replies.forEach(reply => this.appendCommentToUI(postId, reply, 'append', c.commentId));
         }
-
     }
-
 
     // Sửa comment trực tiếp trên UI
     editCommentUI(postId, commentId) {
@@ -1095,8 +1098,10 @@ class PostManager {
                 // Xóa comment khỏi UI
                 const commentEl = document.getElementById(`comment-${commentId}`);
                 if (commentEl) commentEl.remove();
-                if (data.deletedComment.parentCommentId == null || data.deletedComment.parentCommentId == undefined) {
-                    console.log("co parentCommentId")
+                if (!data.deletedComment.parentCommentId) {
+                    // Nếu là comment cha, xóa luôn replies-group
+                    const repliesGroup = document.getElementById(`replies-group-${commentId}`);
+                    if (repliesGroup) repliesGroup.remove();
                     const st = this.commentState[postId];
                     if (st) {
                         // Giảm tổng số comment hiện tại
@@ -1151,7 +1156,11 @@ class PostManager {
     }
 
     showReplyBox(postId, parentCommentId) {
-        const $replyContainer = $(`#replies-${parentCommentId}`);
+        let $replyContainer = $(`#replies-group-${parentCommentId}`);
+        if ($replyContainer.length === 0) {
+            $replyContainer = $(`<div class="replies-group" id="replies-group-${parentCommentId}"></div>`);
+            $(`#comment-${parentCommentId}`).after($replyContainer);
+        }
 
         // Nếu đã có box thì toggle ẩn/hiện
         const existingBox = $replyContainer.find(".reply-box");
@@ -1169,7 +1178,7 @@ class PostManager {
             </button>
         </div>
     `);
-        $replyContainer.prepend($replyBox);
+        $replyContainer.append($replyBox);
     }
 
     submitReply(postId, parentCommentId, btn) {
@@ -1186,6 +1195,11 @@ class PostManager {
             data: JSON.stringify({content}),
             success: (res) => {
                 if (res && res.reply) {
+                    let $repliesGroup = $(`#replies-group-${parentCommentId}`);
+                    if ($repliesGroup.length === 0) {
+                        $repliesGroup = $(`<div class="replies-group" id="replies-group-${parentCommentId}"></div>`);
+                        $(`#comment-${parentCommentId}`).after($repliesGroup);
+                    }
                     this.appendCommentToUI(postId, res.reply, 'append', parentCommentId);
                     $input.closest(".reply-box").remove(); // Xóa ô nhập sau khi gửi
                     this.showNotification("Phản hồi đã được gửi!", "success");

@@ -808,3 +808,50 @@ video:-ms-fullscreen {
     font-weight: 500;
 }
 
+/* Thêm CSS cho replies group và line nối */
+.replies-group {
+    margin-left: 48px;
+    position: relative;
+}
+
+.replies-group::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: -28px;
+    bottom: 0;
+    width: 2px;
+    background-color: #181f30;
+    height: calc(100% + 20px);
+}
+
+.comment-card.reply {
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.comment-card.reply::before {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: -28px;
+    width: 28px;
+    height: 10px;
+    border-bottom: 2px solid #e4e6eb;
+    border-left: 2px solid #e4e6eb;
+    background: red;
+    border-bottom-left-radius: 8px;
+}
+
+.replies-group .comment-card {
+    border: 1px solid #ddd; /* Giữ border cho mỗi card riêng */
+}
+
+.replies-group .comment-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.replies-group .comment-body {
+    font-size: 0.95em;
+}

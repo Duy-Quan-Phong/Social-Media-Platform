@@ -133,37 +133,6 @@ class ProfilePostManager {
         }
     }
 
-    // Photos functionality
-    async loadPhotos() {
-        const photosContainer = document.getElementById('profile-photos-container');
-        const loadingEl = document.getElementById('photos-loading');
-        const noPhotosEl = document.getElementById('no-photos');
-
-        if (!photosContainer || !this.username) return;
-
-        loadingEl.style.display = 'block';
-
-        try {
-            const response = await fetch(`/posts/api/user/${this.username}/photos`);
-            const photos = await response.json();
-
-            if (photos && photos.length > 0) {
-                photos.forEach(photo => {
-                    const photoElement = this.createPhotoElement(photo);
-                    photosContainer.insertAdjacentHTML('beforeend', photoElement);
-                });
-                noPhotosEl.style.display = 'none';
-            } else {
-                noPhotosEl.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error loading photos:', error);
-            this.showNotification('Không thể tải ảnh', 'error');
-        } finally {
-            loadingEl.style.display = 'none';
-        }
-    }
-
     createPhotoElement(photo) {
         return `
             <div class="photo-item" onclick="profilePostManager.viewImage('${photo.url}')">
