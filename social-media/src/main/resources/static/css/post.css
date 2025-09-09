@@ -483,8 +483,7 @@
 .comment-time {
     font-size: 12px;
     color: #65676b;
-    margin-left: 52px;
-    margin-top: 4px;
+    margin-left: 4px;
 }
 
 /* Edit Post Modal */
@@ -594,6 +593,9 @@
     padding: 10px;
     margin-bottom: 10px;
     background: #fff;
+    display: flex;
+    align-items: flex-start;
+    position: relative;
 }
 .comment-avatar {
     width: 40px;
@@ -601,6 +603,7 @@
     border-radius: 50%;
     object-fit: cover;
     margin-right: 10px;
+    flex-shrink: 0;
 }
 .comment-actions button {
     margin-right: 10px;
@@ -814,33 +817,27 @@ video:-ms-fullscreen {
     position: relative;
 }
 
-.replies-group::before {
-    content: "";
+.vertical-line {
     position: absolute;
-    top: -10px;
-    left: -28px;
-    bottom: 0;
-    width: 2px;
-    background-color: #181f30;
-    height: calc(100% + 20px);
+    left: -27px;
+    width: 3px;
+    background-color: #000;
+    top: -10px;  /* Fixed upward offset to connect to parent; adjust if parent heights vary a lot */
+}
+
+.line-reply {
+    position: absolute;  /* Changed to absolute for precise positioning relative to wrapper */
+    width: 30px;
+    left: -27px;
+    height: 3px;  /* Thickness of the line */
+    background-color: red;  /* Use background-color instead of color */
+    z-index: 5;
+    /* top is set dynamically in JS */
 }
 
 .comment-card.reply {
     margin-bottom: 8px;
     position: relative;
-}
-
-.comment-card.reply::before {
-    content: "";
-    position: absolute;
-    top: 20px;
-    left: -28px;
-    width: 28px;
-    height: 10px;
-    border-bottom: 2px solid #e4e6eb;
-    border-left: 2px solid #e4e6eb;
-    background: red;
-    border-bottom-left-radius: 8px;
 }
 
 .replies-group .comment-card {
@@ -851,7 +848,9 @@ video:-ms-fullscreen {
     width: 32px;
     height: 32px;
 }
-
+.comment-body {
+    flex: 1;
+}
 .replies-group .comment-body {
     font-size: 0.95em;
 }

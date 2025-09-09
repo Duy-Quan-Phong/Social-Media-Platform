@@ -932,28 +932,30 @@ class PostManager {
 
         const timeAgo = formatTimeAgo(c.createdAt);
         const canEdit = c.canEdit || false;
-        const canDelete = c.canDeleted || false;
+        const canDelete = c.canDeleted || false;  // Note: Typo? Should be canDelete = c.canDelete || false;
         const likeCount = c.likeCount || 0;
         this.subscribeToCommentLikes(c.commentId);
         const actionButtons = (canEdit || canDelete) ? `
-    <div style="position: absolute; top: 5px; right: 5px; z-index: 10;" class="dropdown comment-actions-dropdown">
-        <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-ellipsis-h"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end" style="min-width: auto; width: 120px;">
-            ${canEdit ? `
-                <li><button class="dropdown-item" style="font-size: 14px; padding: 5px 10px;" onclick="postManager.editCommentUI(${postId}, ${c.commentId})">
-                    <i class="fas fa-edit"></i> Sửa
-                </button></li>` : ''}
-            ${canDelete ? `
-                <li><button class="dropdown-item text-danger" style="font-size: 14px; padding: 5px 10px;" onclick="postManager.deleteComment(${postId}, ${c.commentId})">
-                    <i class="fas fa-trash"></i> Xóa
-                </button></li>` : ''}
-        </ul>
-    </div>
+<div style="position: absolute; top: 5px; right: 5px; z-index: 10;" class="dropdown comment-actions-dropdown">
+    <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-ellipsis-h"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" style="min-width: auto; width: 120px;">
+        ${canEdit ? `
+            <li><button class="dropdown-item" style="font-size: 14px; padding: 5px 10px;" onclick="postManager.editCommentUI(${postId}, ${c.commentId})">
+                <i class="fas fa-edit"></i> Sửa
+            </button></li>` : ''}
+        ${canDelete ? `
+            <li><button class="dropdown-item text-danger" style="font-size: 14px; padding: 5px 10px;" onclick="postManager.deleteComment(${postId}, ${c.commentId})">
+                <i class="fas fa-trash"></i> Xóa
+            </button></li>` : ''}
+    </ul>
+</div>
 ` : '';
 
         const $card = $(`
+<div style="position: relative">
+    ${parentId ? `<div class="line-reply"></div>` : ''}  <!-- Use div instead of hr for better control -->
     <div style="position: relative; max-width: 100%; overflow: hidden;" class="comment-card d-flex ${parentId ? 'reply' : ''}" id="comment-${c.commentId}" data-comment-id="${c.commentId}">
         ${actionButtons} 
         <img src="${c.userAvatarUrl || '/images/default-avatar.jpg'}" alt="avatar" class="comment-avatar">
@@ -978,6 +980,7 @@ class PostManager {
             </div>
         </div>
     </div>
+</div>
 `);
 
         const $container = $(`#comments-list-${postId}`);
@@ -989,14 +992,25 @@ class PostManager {
             $target.append($card);
         }
 
+        // New: If this is a reply, dynamically position the horizontal line at the midpoint of the comment card
+        if (parentId) {
+            const commentHeight = $card.find('.comment-card').outerHeight();
+            $card.find('.line-reply').css('top', Math.round(commentHeight / 2) + 'px');
+        }
+
         // Nếu là comment cha và có replies, tạo replies-group và render replies
         if (!parentId && c.replies && c.replies.length > 0) {
             let $repliesGroup = $(`#replies-group-${c.commentId}`);
             if ($repliesGroup.length === 0) {
-                $repliesGroup = $(`<div class="replies-group" id="replies-group-${c.commentId}"></div>`);
+                $repliesGroup = $(`<div class="replies-group" id="replies-group-${c.commentId}"><div class="vertical-line"></div></div>`);  // Use div instead of hr
                 $card.after($repliesGroup);
             }
             c.replies.forEach(reply => this.appendCommentToUI(postId, reply, 'append', c.commentId));
+
+            // New: After all replies are appended, calculate and set the vertical line height dynamically
+            const repliesHeight = $repliesGroup.outerHeight();
+            const verticalHeight = repliesHeight - 43;  // Extend upward by the top offset amount
+            $repliesGroup.find('.vertical-line').css('height', verticalHeight + 'px');
         }
     }
 
