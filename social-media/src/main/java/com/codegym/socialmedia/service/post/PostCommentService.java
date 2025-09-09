@@ -6,11 +6,12 @@ import com.codegym.socialmedia.model.social_action.PostComment;
 import org.springframework.data.domain.Page;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 public interface PostCommentService {
 
-    PostComment addComment(Long postId, User user, String content);
+    PostComment addComment(Long postId, User user, String content, List<Long> mentionIds);
 
     Page<DisplayCommentDTO> getCommentsByPost(Long postId, User currentUser, int page, int size);
     // Thêm method update comment
@@ -22,4 +23,3 @@ public interface PostCommentService {
     boolean toggleLikeComment(Long commentId, User currentUser);
     DisplayCommentDTO replyToComment(Long commentId, User currentUser, String content);
 }
-

@@ -1,9 +1,11 @@
 package com.codegym.socialmedia.controller;
 
 import com.codegym.socialmedia.component.PrivacyUtils;
+import com.codegym.socialmedia.dto.UserDTO;
 import com.codegym.socialmedia.dto.UserRegistrationDto;
 import com.codegym.socialmedia.dto.UserPasswordDto;
 import com.codegym.socialmedia.dto.UserUpdateDto;
+import com.codegym.socialmedia.dto.chat.UserSearchDto;
 import com.codegym.socialmedia.dto.friend.FriendDto;
 import com.codegym.socialmedia.general_interface.NormalRegister;
 import com.codegym.socialmedia.model.PrivacyLevel;
@@ -20,6 +22,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -322,4 +325,12 @@ public class UserController {
 
         return ResponseEntity.ok(photos);
     }
+    @GetMapping("/api/friends/search")
+    public ResponseEntity<List<UserSearchDto>> searchFriends(
+            @RequestParam String keyword) {
+        User currentUser = userService.getCurrentUser();
+        List<UserSearchDto> results = friendshipService.searchFriends(keyword, currentUser.getId());
+        return ResponseEntity.ok(results);
+    }
+
 }

@@ -101,6 +101,8 @@ function buildNotificationText(n) {
             return `${username} đã trả lời bình luận của bạn`;
         case 'FRIEND_REQUEST':
             return `${username} đã gửi lời mời kết bạn`;
+        case 'MENTION_COMMENT':
+            return `${username} đã nhắc đến bạn trong một bình luận`;
         default:
             return n.message || "Bạn có một thông báo mới";
     }

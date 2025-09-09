@@ -35,7 +35,7 @@ public class CommentController {
 
     @PostMapping("/add")
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
-        PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent());
+        PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentions());
         DisplayCommentDTO newComment = new DisplayCommentDTO(saved, false);
         newComment.setCanEdit(true);
         newComment.setCanDeleted(true);

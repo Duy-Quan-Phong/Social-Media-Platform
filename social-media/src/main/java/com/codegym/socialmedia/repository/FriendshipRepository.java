@@ -167,6 +167,26 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
     @Query("SELECT f FROM Friendship f WHERE ((f.requester = :a AND f.addressee = :b) OR (f.requester = :b AND f.addressee = :a))")
     Optional<Friendship> findFriendshipBetween(@Param("a") User a, @Param("b") User b);
+    @Query("""
+    SELECT u
+    FROM User u
+    WHERE u.id IN (
+        SELECT CASE
+                   WHEN f.requester.id = :currentUserId THEN f.addressee.id
+                   ELSE f.requester.id
+               END
+        FROM Friendship f
+        WHERE (f.requester.id = :currentUserId OR f.addressee.id = :currentUserId)
+          AND f.status = 'ACCEPTED'
+    )
+    AND (
+        LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+""")
+    List<User> findFriendsByKeyword(@Param("currentUserId") Long currentUserId,
+                                    @Param("keyword") String keyword);
 
 
 
