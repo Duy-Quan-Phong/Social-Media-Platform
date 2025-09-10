@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 @Data
@@ -53,6 +55,12 @@ public class DisplayCommentDTO {
         this.parentCommentId = comment.getParent() !=null ? comment.getParent().getId() : null;
     }
 
+    private static List<PostComment> sortComments(Collection<PostComment> comments) {
+        return comments.stream()
+                .sorted(Comparator.comparing(PostComment::getCreatedAt).reversed())
+                .collect(Collectors.toList());
+    }
+
     public static DisplayCommentDTO mapToDTO(PostComment comment,
                                              User currentUser,
                                              FriendshipService friendshipService) {
@@ -73,7 +81,7 @@ public class DisplayCommentDTO {
             if (depth > 1) {
                 // Giữ nested: đệ quy cho mỗi reply với depth-1
                 List<DisplayCommentDTO> replies = new ArrayList<>();
-                for (PostComment reply : comment.getReplies()) {
+                for (PostComment reply : sortComments(comment.getReplies())) {
                     replies.add(getComment(reply, currentUser, friendshipService, depth - 1));
                 }
                 dto.setReplies(replies);
@@ -148,7 +156,7 @@ public class DisplayCommentDTO {
                                                FriendshipService friendshipService) {
         if (root.getReplies() == null || root.getReplies().isEmpty()) return;
 
-        for (PostComment child : root.getReplies()) {
+        for (PostComment child : sortComments(root.getReplies())) {
             // Tạo DTO leaf cho child (KHÔNG set nested replies)
             DisplayCommentDTO leaf = buildDtoBase(child, currentUser, friendshipService);
             leaf.setReplies(null);

@@ -1265,7 +1265,7 @@ class PostManager {
 
         // Nếu chưa có thì thêm box
         const $replyBox = $(`
-        <div class="reply-box mt-2">
+        <div class="reply-box mt-2 mb-2">
             <textarea class="form-control reply-input" placeholder="Viết phản hồi..."></textarea>
             <button class="btn btn-sm btn-primary mt-1" onclick="postManager.submitReply(${postId}, ${parentCommentId}, this)">
                 Gửi
