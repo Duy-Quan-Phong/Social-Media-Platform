@@ -888,6 +888,7 @@ class PostManager {
             type: 'GET',
             data: {page, size}
         }).done((data) => {
+            console.log(data)
             const $container = $(`#comments-list-${postId}`);
             if (!append) $container.empty();
 
@@ -929,10 +930,9 @@ class PostManager {
     }
 
     appendCommentToUI(postId, c, type = 'append', parentId = null) {
-
         const timeAgo = formatTimeAgo(c.createdAt);
-        const canEdit = c.canEdit || false;
-        const canDelete = c.canDeleted || false;  // Note: Typo? Should be canDelete = c.canDelete || false;
+        const canEdit = !!c.canEdit;
+        const canDelete = !!c.canDelete || !!c.canDeleted || false;
         const likeCount = c.likeCount || 0;
         this.subscribeToCommentLikes(c.commentId);
         const actionButtons = (canEdit || canDelete) ? `
@@ -954,8 +954,8 @@ class PostManager {
 ` : '';
 
         const $card = $(`
-<div style="position: relative">
-    ${parentId ? `<div class="line-reply"></div>` : ''}  <!-- Use div instead of hr for better control -->
+<div style="position: relative" class="comment-wrapper">
+    ${parentId ? `<div class="line-reply"></div>` : ''}  <!-- horizontal connector -->
     <div style="position: relative; max-width: 100%; overflow: hidden;" class="comment-card d-flex ${parentId ? 'reply' : ''}" id="comment-${c.commentId}" data-comment-id="${c.commentId}">
         ${actionButtons} 
         <img src="${c.userAvatarUrl || '/images/default-avatar.jpg'}" alt="avatar" class="comment-avatar">
@@ -992,25 +992,106 @@ class PostManager {
             $target.append($card);
         }
 
-        // New: If this is a reply, dynamically position the horizontal line at the midpoint of the comment card
-        if (parentId) {
-            const commentHeight = $card.find('.comment-card').outerHeight();
-            $card.find('.line-reply').css('top', Math.round(commentHeight / 2) + 'px');
+        // Căn line ngang (nối ngang) so với card bên trong wrapper (dùng position => relative trong wrapper)
+        function positionLineReply($cardElem) {
+            const $commentCard = $cardElem.find('.comment-card');
+            if ($commentCard.length === 0) return;
+
+            // position() trả về tọa độ relative tới offsetParent (ở đây wrapper)
+            const cardTopRel = $commentCard.position().top || 0;
+            const cardMidRel = Math.round(cardTopRel + $commentCard.outerHeight() / 2);
+
+            // đảm bảo .line-reply tồn tại trước khi set
+            const $line = $cardElem.find('.line-reply');
+            if ($line.length) {
+                $line.css('top', cardMidRel + 'px');
+            }
         }
 
-        // Nếu là comment cha và có replies, tạo replies-group và render replies
-        if (!parentId && c.replies && c.replies.length > 0) {
+        // Cập nhật vertical-line của parent: nối từ midpoint của parent -> midpoint của **last direct child reply**
+        function updateConnectorsForParent($parentCardWrapper, $repliesGroup) {
+            if ($repliesGroup.length === 0) return;
+            const $commentCard = $parentCardWrapper.find('.comment-card');
+            if ($commentCard.length === 0) return;
+
+            // midpoint tuyệt đối của parent
+            const parentMidAbs = $commentCard.offset().top + $commentCard.outerHeight() / 2;
+
+            // top tuyệt đối của replies-group
+            const repliesGroupTopAbs = $repliesGroup.offset().top;
+
+            // --- LẤY last DIRECT CHILD (không include các .comment-card nằm trong nested replies-group)
+            const $directWrappers = $repliesGroup.children('.comment-wrapper').filter(':visible');
+            let lastCenterAbs;
+            if ($directWrappers.length > 0) {
+                const $lastDirectWrapper = $directWrappers.last();
+                const $lastDirectCard = $lastDirectWrapper.find('.comment-card').first();
+                if ($lastDirectCard.length > 0) {
+                    lastCenterAbs = $lastDirectCard.offset().top + $lastDirectCard.outerHeight() / 2;
+                } else {
+                    // fallback: nếu không có .comment-card trong wrapper, dùng center của wrapper
+                    lastCenterAbs = $lastDirectWrapper.offset().top + $lastDirectWrapper.outerHeight() / 2;
+                }
+            } else {
+                // fallback: nếu không có direct wrapper (hiếm) -> dùng trung tâm replies-group
+                lastCenterAbs = repliesGroupTopAbs + $repliesGroup.outerHeight() / 2;
+            }
+
+            // top của vertical-line tương đối so với repliesGroup
+            let topRelative = Math.round(parentMidAbs - repliesGroupTopAbs);
+            if (topRelative < 0) topRelative = 0; // clamp để không có top âm
+
+            // height từ midpoint parent tới midpoint last direct child
+            let heightRelative = Math.round(lastCenterAbs - parentMidAbs);
+            if (heightRelative < 8) heightRelative = 8; // min height để thấy rõ đường
+
+            const parentHeight = $commentCard.outerHeight(true);
+            const parentHalfHeight = parentHeight / 2;
+
+            $repliesGroup.find('.vertical-line').css({
+                top: topRelative-10 + 'px',
+                height: heightRelative-parentHalfHeight+7 + 'px'
+            });
+
+            // cập nhật luôn line ngang của parent
+            positionLineReply($parentCardWrapper);
+        }
+
+
+
+        // Nếu comment có replies, tạo replies-group và render replies
+        if (c.replies && c.replies.length > 0) {
             let $repliesGroup = $(`#replies-group-${c.commentId}`);
             if ($repliesGroup.length === 0) {
-                $repliesGroup = $(`<div class="replies-group" id="replies-group-${c.commentId}"><div class="vertical-line"></div></div>`);  // Use div instead of hr
+                $repliesGroup = $(`<div class="replies-group" id="replies-group-${c.commentId}" style="position: relative"><div class="vertical-line"></div></div>`);
                 $card.after($repliesGroup);
             }
             c.replies.forEach(reply => this.appendCommentToUI(postId, reply, 'append', c.commentId));
 
-            const repliesHeight = $repliesGroup.outerHeight();
-            const verticalHeight = repliesHeight - 43;  // Extend upward by the top offset amount
-            $repliesGroup.find('.vertical-line').css('height', verticalHeight + 'px');
+            // Sau khi DOM đã chèn (ảnh có thể chưa load) => tính connector
+            // dùng requestAnimationFrame để chạy sau khi browser layout xong
+            const self = this;
+            requestAnimationFrame(() => {
+                // tìm lại wrapper của parent (vì $card có thể đã được jQuery clone etc)
+                const $parentWrapper = $(`#comment-${c.commentId}`).closest('.comment-wrapper');
+                const $rg = $(`#replies-group-${c.commentId}`);
+                updateConnectorsForParent($parentWrapper, $rg);
+            });
+
+            // Reposition khi avatar load (ảnh có thể ảnh hưởng height)
+            $card.find('img.comment-avatar').on('load', () => {
+                const $parentWrapper = $(`#comment-${c.commentId}`).closest('.comment-wrapper');
+                const $rg = $(`#replies-group-${c.commentId}`);
+                requestAnimationFrame(() => updateConnectorsForParent($parentWrapper, $rg));
+            });
+        } else {
+            // Nếu không có replies: vẫn set line-reply trung tâm nếu là reply
+            if (parentId) {
+                positionLineReply($card);
+            }
         }
+
+        return $card;
     }
 
     // Sửa comment trực tiếp trên UI
