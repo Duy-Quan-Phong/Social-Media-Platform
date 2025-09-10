@@ -209,6 +209,24 @@ public class ChatController {
         return "FILE";
     }
 
+    @GetMapping("/unread/{conversationId}/{userId}")
+    public ResponseEntity<Long> getUnreadCount(@PathVariable Long conversationId,
+                                               @PathVariable Long userId) {
+        return ResponseEntity.ok(chatService.getUnreadCount(conversationId, userId));
+    }
+
+    @GetMapping("/unread/total/{userId}")
+    public ResponseEntity<Long> getTotalUnread(@PathVariable Long userId) {
+        return ResponseEntity.ok(chatService.getTotalUnread(userId));
+    }
+
+    @PostMapping("/mark-read/{conversationId}/{userId}")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long conversationId,
+                                           @PathVariable Long userId) {
+        chatService.markAsRead(conversationId, userId);
+        return ResponseEntity.ok().build();
+    }
+
 
     @GetMapping("/api/chat/conversation/{id}/messages")
     @ResponseBody
@@ -288,7 +306,7 @@ public class ChatController {
                 .orElseThrow(() -> new RuntimeException("Conversation không tồn tại"));
 
         ConversationParticipant participant =
-                conversationParticipantRepository.findConversationParticipantByConversationAndUser(conversation, currentUser);
+                conversationParticipantRepository.findByConversationIdAndUserId(conversationId, currentUser.getId()) .orElseThrow(() -> new RuntimeException("Not participant"));;
 
         if (participant == null) {
             throw new RuntimeException("Bạn không có quyền vào cuộc gọi này");
@@ -299,7 +317,7 @@ public class ChatController {
         model.addAttribute("isCaller", isCaller);
         model.addAttribute("isIncoming", incoming);
 
-// Find remote info
+        // Find remote info
         String remoteName;
         String remoteAvatar;
         if (conversation.getParticipants().size() > 2) {

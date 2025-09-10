@@ -15,15 +15,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ConversationParticipant {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @EmbeddedId
+    private ConversationParticipantId id;
+
+    private Long lastReadMessageId;
 
     @ManyToOne
+    @MapsId("conversationId")
     @JoinColumn(name = "conversation_id")
     private Conversation conversation;
 
     @ManyToOne
+    @MapsId("userId")
     @JoinColumn(name = "user_id")
     private User user;
 

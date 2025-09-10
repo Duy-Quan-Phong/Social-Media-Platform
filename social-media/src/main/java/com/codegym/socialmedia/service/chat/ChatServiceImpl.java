@@ -203,6 +203,35 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    @Override
+    public Long getTotalUnread(Long userId) {
+        return messageRepository.countTotalUnread(userId);
+    }
+
+    @Override
+    public Long getUnreadCount(Long conversationId, Long userId) {
+        ConversationParticipant cp = participantRepository
+                .findByConversationIdAndUserId(conversationId, userId)
+                .orElseThrow(() -> new RuntimeException("Not participant"));
+
+        Long lastRead = cp.getLastReadMessageId() == null ? 0 : cp.getLastReadMessageId();
+        return messageRepository.countUnreadMessages(conversationId, lastRead);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long conversationId, Long userId) {
+        ConversationParticipant cp = participantRepository
+                .findByConversationIdAndUserId(conversationId, userId)
+                .orElseThrow(() -> new RuntimeException("Not participant"));
+
+        Long latestMsgId = messageRepository.findLatestMessageId(conversationId);
+        if (latestMsgId != null) {
+            cp.setLastReadMessageId(latestMsgId);
+            participantRepository.save(cp);
+        }
+    }
+
     // ====== BỔ SUNG ======
     @Override
     public List<UserSearchDto> searchUsers(String keyword, Long currentUserId) {

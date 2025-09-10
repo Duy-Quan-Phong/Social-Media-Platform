@@ -16,7 +16,7 @@ public class Message {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer messageId;
+    private Long messageId;
 
     @ManyToOne
     @JoinColumn(name = "conversation_id")
@@ -41,9 +41,6 @@ public class Message {
 
     @Enumerated(EnumType.STRING)
     private CallStatus callStatus;
-
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
-    private List<MessageRead> messageReads;
 
     @Enumerated(EnumType.STRING)
     private MessageType messageType;  // Added to Message entity for consistency
