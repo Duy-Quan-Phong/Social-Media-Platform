@@ -14,4 +14,5 @@ import java.io.Serializable;
 public class ConversationParticipantId implements Serializable {
     private Long conversationId;
     private Long userId;
+    private static final long serialVersionUID = 1L;
 }

@@ -215,12 +215,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getUnreadCount(conversationId, userId));
     }
 
-    @GetMapping("/unread/total/{userId}")
+    @GetMapping("/api/chat/unread/total/{userId}")
     public ResponseEntity<Long> getTotalUnread(@PathVariable Long userId) {
         return ResponseEntity.ok(chatService.getTotalUnread(userId));
     }
 
-    @PostMapping("/mark-read/{conversationId}/{userId}")
+    @PostMapping("/api/chat/mark-read/{conversationId}/{userId}")
     public ResponseEntity<Void> markAsRead(@PathVariable Long conversationId,
                                            @PathVariable Long userId) {
         chatService.markAsRead(conversationId, userId);

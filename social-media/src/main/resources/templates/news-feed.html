@@ -122,7 +122,6 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
     const currentUser = /*[[${#authentication.principal.username}]]*/ 'defaultUser';
-    const currentUserId = /*[[${#authentication.principal.id}]]*/ '1';
 
     // Set current user ID in meta tag for chat.js
     if (document.querySelector('meta[name="user-id"]')) {

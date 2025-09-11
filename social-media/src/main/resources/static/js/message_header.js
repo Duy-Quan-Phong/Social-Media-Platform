@@ -133,21 +133,32 @@ class MessageDropdown {
         const nameEsc = (friend.name || '').replace(/'/g, "\\'");
         const avatar = friend.avatar || '/images/default-avatar.jpg';
         const type = friend.type || 'private';
-        const preview = friend.lastMessage ? `${friend.lastMessage} • ${friend.timeAgo || ''}` : 'Chưa có tin nhắn • Vừa tạo';
+        const preview = friend.lastMessage
+            ? `${friend.lastMessage} • ${friend.timeAgo || ''}`
+            : 'Chưa có tin nhắn • Vừa tạo';
+
+        const unreadBadge = friend.unreadCount && friend.unreadCount > 0
+            ? `<span class="badge bg-danger ms-2">${friend.unreadCount}</span>`
+            : '';
 
         return `
-        <div class="conversation-item" onclick="messageDropdown.openChat('${friend.id}', '${nameEsc}', '${avatar}', '${type}')">
+        <div class="conversation-item" 
+             onclick="messageDropdown.openChat('${friend.id}', '${nameEsc}', '${avatar}', '${type}')">
             <div style="position: relative;">
                 <img src="${avatar}" alt="Avatar" class="conversation-avatar">
                 ${friend.isOnline || friend.online ? '<div class="online-dot"></div>' : ''}
             </div>
             <div class="conversation-info">
-                <div class="conversation-name">${friend.name}</div>
+                <div class="conversation-name d-flex justify-content-between align-items-center">
+                    <span>${friend.name}</span>
+                    ${unreadBadge}
+                </div>
                 <div class="conversation-preview">${preview}</div>
             </div>
         </div>
     `;
     }
+
 
     openChat(id, name, avatar, type = 'private') {
         this.closeDropdown();
@@ -378,13 +389,36 @@ class MessageDropdown {
         }
     }
 
-    refresh() {
-        if (this.isOpen) this.loadContacts();
+
+
+
+}
+async function fetchTotalUnread() {
+    try {
+        const response = await fetch(`/api/chat/unread/total/${currentUserId}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
+        const count = await response.json();
+        updateMessageBadge(count);
+    } catch (err) {
+        console.error('Error fetching total unread:', err);
     }
 }
+function updateMessageBadge(totalUnread) {
+    const badge = document.getElementById('messageBadge');
+    if (!badge) return;
 
+    if (totalUnread > 0) {
+        badge.textContent = totalUnread;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
     window.messageDropdown = new MessageDropdown();
     window.searchUsersForGroup = (q) => messageDropdown.searchUsersForGroup(q);
     window.createGroup = () => messageDropdown.createGroup();
+    fetchTotalUnread();
 });

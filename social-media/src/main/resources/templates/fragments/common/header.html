@@ -51,11 +51,16 @@
 
             <!-- RIGHT: Messages, Notifications, User -->
             <div class="d-flex align-items-center gap-3">
-               
+
                 <!-- Icon Tin nhắn với dropdown -->
                 <div class="nav-icon-wrapper position-relative" id="messageIcon"
                      data-bs-toggle="tooltip" data-bs-placement="bottom" title="Tin nhắn">
                     <i class="fas fa-comment-dots fa-lg nav-icon"></i>
+
+                    <!-- Badge tổng số tin chưa đọc -->
+                    <span id="messageBadge"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                          style="font-size: 0.7rem; display: none;">0</span>
 
                     <!-- Message Dropdown -->
                     <div class="message-dropdown" id="messageDropdown">
@@ -129,7 +134,7 @@
                                 Trang admin
                             </a>
                         </li>
-                            <hr class="dropdown-divider">
+                        <hr class="dropdown-divider">
                         </li>
                         <li>
                             <form th:action="@{/logout}" method="post" style="margin: 0;">
@@ -155,7 +160,7 @@
     </nav>
 
     <div data-bs-backdrop="false"
-    class="modal fade" id="createGroupModal"  aria-hidden="true">
+         class="modal fade" id="createGroupModal" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -167,11 +172,13 @@
                     <input id="cg-name" class="form-control mb-3" placeholder="Nhóm của tôi" value="Nhóm mới">
 
                     <label class="form-label">Thêm thành viên</label>
-                    <input id="cg-search" class="form-control mb-2" placeholder="Gõ tên để tìm..." oninput="searchUsersForGroup(this.value)">
+                    <input id="cg-search" class="form-control mb-2" placeholder="Gõ tên để tìm..."
+                           oninput="searchUsersForGroup(this.value)">
                     <div id="cg-results" class="border rounded p-2 mb-2" style="max-height: 200px; overflow-y: auto;">
                         <div class="text-muted text-center">Gõ tên để tìm bạn bè...</div>
                     </div>
-                    <div id="cg-selected-list" class="border rounded p-2 mb-3" style="max-height: 200px; overflow-y: auto;"></div>
+                    <div id="cg-selected-list" class="border rounded p-2 mb-3"
+                         style="max-height: 200px; overflow-y: auto;"></div>
                     <div class="small text-muted">Đã chọn: <span id="cg-picked">0</span> người</div>
 
                     <label class="form-label mt-3">Ảnh nhóm (tuỳ chọn)</label>
@@ -184,9 +191,11 @@
             </div>
         </div>
     </div>
-
-    <script type="module" th:src="@{/js/notification.js}"></script>
-    <script th:src="@{/js/message_header.js}"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const currentUserId = /*[[${#authentication.principal.id}]]*/ null;
+        /*]]>*/
+    </script>
     <script>
         // ---------- UI Utilities ----------
         function activateTooltips() {
@@ -209,5 +218,6 @@
             activateNavLinks();
         });
     </script>
-
+    <script type="module" th:src="@{/js/notification.js}"></script>
+    <script th:src="@{/js/message_header.js}"></script>
 </header>

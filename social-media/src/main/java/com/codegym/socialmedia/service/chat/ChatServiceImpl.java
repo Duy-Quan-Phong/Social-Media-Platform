@@ -3,10 +3,7 @@ package com.codegym.socialmedia.service.chat;
 import com.codegym.socialmedia.component.CloudinaryService;
 import com.codegym.socialmedia.dto.chat.*;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.conversation.Conversation;
-import com.codegym.socialmedia.model.conversation.ConversationParticipant;
-import com.codegym.socialmedia.model.conversation.Message;
-import com.codegym.socialmedia.model.conversation.MessageAttachment;
+import com.codegym.socialmedia.model.conversation.*;
 import com.codegym.socialmedia.repository.ConversationParticipantRepository;
 import com.codegym.socialmedia.repository.ConversationRepository;
 import com.codegym.socialmedia.repository.IUserRepository;
@@ -303,8 +300,10 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private Conversation createNewPrivateConversation(Long user1Id, Long user2Id) {
-        User user1 = userRepository.findById(user1Id).orElseThrow(() -> new RuntimeException("User1 not found"));
-        User user2 = userRepository.findById(user2Id).orElseThrow(() -> new RuntimeException("User2 not found"));
+        User user1 = userRepository.findById(user1Id)
+                .orElseThrow(() -> new RuntimeException("User1 not found"));
+        User user2 = userRepository.findById(user2Id)
+                .orElseThrow(() -> new RuntimeException("User2 not found"));
 
         Conversation conv = new Conversation();
         conv.setConversationType(Conversation.ConversationType.PRIVATE);
@@ -314,14 +313,24 @@ public class ChatServiceImpl implements ChatService {
         conv.setUpdatedAt(LocalDateTime.now());
         Conversation saved = conversationRepository.save(conv);
 
+        // Participant 1
         ConversationParticipant p1 = new ConversationParticipant();
-        p1.setConversation(saved); p1.setUser(user1); p1.setRole(ConversationParticipant.Role.MEMBER);
-        p1.setJoinedAt(LocalDateTime.now()); p1.setIsActive(true);
+        p1.setId(new ConversationParticipantId(saved.getId(), user1.getId()));
+        p1.setConversation(saved);
+        p1.setUser(user1);
+        p1.setRole(ConversationParticipant.Role.MEMBER);
+        p1.setJoinedAt(LocalDateTime.now());
+        p1.setIsActive(true);
         participantRepository.save(p1);
 
+        // Participant 2
         ConversationParticipant p2 = new ConversationParticipant();
-        p2.setConversation(saved); p2.setUser(user2); p2.setRole(ConversationParticipant.Role.MEMBER);
-        p2.setJoinedAt(LocalDateTime.now()); p2.setIsActive(true);
+        p2.setId(new ConversationParticipantId(saved.getId(), user2.getId()));
+        p2.setConversation(saved);
+        p2.setUser(user2);
+        p2.setRole(ConversationParticipant.Role.MEMBER);
+        p2.setJoinedAt(LocalDateTime.now());
+        p2.setIsActive(true);
         participantRepository.save(p2);
 
         return saved;

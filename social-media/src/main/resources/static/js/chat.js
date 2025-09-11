@@ -1,6 +1,12 @@
 // ================ IMPROVED CHAT SYSTEM ================
 let stompClient = null;
-
+function getCurrentUserId() {
+    return (
+        document.querySelector('meta[name="user-id"]')?.content ||
+        document.querySelector('[data-user-id]')?.getAttribute('data-user-id') ||
+        '0'
+    );
+}
 class ChatManager {
     constructor() {
         this.openChats = new Map();
@@ -41,14 +47,6 @@ class ChatManager {
                 dd.classList.remove('show');
             }
         });
-    }
-
-    getCurrentUserId() {
-        return (
-            document.querySelector('meta[name="user-id"]')?.content ||
-            document.querySelector('[data-user-id]')?.getAttribute('data-user-id') ||
-            '0'
-        );
     }
 
     async openChat(targetKey, displayName, avatar, type = 'private') {
@@ -101,6 +99,16 @@ class ChatManager {
         this.subscribeToConversation(domKey);
     }
 
+    async markConversationAsRead(conversationId) {
+        try {
+            await fetch(`/api/chat/mark-read/${conversationId}/${currentUserId}`, { method: 'POST' }); // TODO: userId động
+            await fetchTotalUnread(); // reload danh sách + badge
+        } catch (e) {
+            console.error('Error marking as read:', e);
+        }
+    }
+
+
     async openExistingConversation(conversationId, name, avatar, type) {
         const id = String(conversationId);
         console.log("conversationId in openExistingConversation: ", conversationId)
@@ -128,6 +136,7 @@ class ChatManager {
 
         // Subscribe to the conversation topic for real-time messages
         this.subscribeToConversation(id);
+        await this.markConversationAsRead(id)
     }
 
     subscribeToConversation(conversationId) {
@@ -351,7 +360,7 @@ class ChatManager {
             const timeDiv = box.querySelector('.message-time');
             box.innerHTML = '';
             if (timeDiv) box.appendChild(timeDiv);
-            const me = String(this.getCurrentUserId());
+            const me = String(getCurrentUserId());
 
             (messages || []).forEach(m => {
                 const mine = String(m.senderId) === me;
@@ -806,7 +815,7 @@ class ChatManager {
 
     handleIncomingMessage(payload) {
         const id = String(payload.conversationId);
-        const me = String(this.getCurrentUserId());
+        const me = String(getCurrentUserId());
         const mine = String(payload.senderId) === me;
         if (this.openChats.has(id)) {
             if (mine) {
