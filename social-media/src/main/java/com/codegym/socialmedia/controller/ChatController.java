@@ -133,7 +133,6 @@ public class ChatController {
     }
 
     // API gửi tin nhắn
-    // Updated Controller method
     @PostMapping("/api/chat/send-message")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> sendMessage(

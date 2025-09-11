@@ -108,6 +108,10 @@ public class ChatServiceImpl implements ChatService {
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
 
+        ConversationParticipant participant = participantRepository.findByConversationIdAndUserId(conversation.getId(),senderId).orElse(null);
+        participant.setLastReadMessageId(saved.getMessageId());
+        participantRepository.save(participant);
+
         MessageDto dto = mapToMessageDto(saved);
         dto.setConversationId(conversation.getId());
         dto.setConversationType(conversation.getConversationType().name().toLowerCase());
@@ -413,7 +417,9 @@ public class ChatServiceImpl implements ChatService {
             dto.setTimeAgo("Vừa tạo");
         }
 
-        long unread = messageRepository.countUnreadMessages(c.getId(), currentUserId);
+        Optional<ConversationParticipant> paticipant = participantRepository.findByConversationIdAndUserId(c.getId(), currentUserId);
+
+        long unread = messageRepository.countUnreadMessages(c.getId(),paticipant.get().getLastReadMessageId());
         dto.setUnreadCount((int) unread);
         dto.setHasUnread(unread > 0);
         dto.setOnline(true); // TODO
