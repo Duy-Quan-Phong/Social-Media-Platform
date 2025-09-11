@@ -139,6 +139,10 @@ public class ChatServiceImpl implements ChatService {
         Conversation saved = conversationRepository.save(conversation);
 
         ConversationParticipant admin = new ConversationParticipant();
+        ConversationParticipantId id = new ConversationParticipantId();
+        id.setConversationId(saved.getId());
+        id.setUserId(creator.getId());
+        admin.setId(id);
         admin.setConversation(saved);
         admin.setUser(creator);
         admin.setRole(ConversationParticipant.Role.ADMIN);
@@ -149,6 +153,10 @@ public class ChatServiceImpl implements ChatService {
         for (User p : participants) {
             if (Objects.equals(p.getId(), creator.getId())) continue;
             ConversationParticipant member = new ConversationParticipant();
+            id = new ConversationParticipantId();
+            id.setConversationId(saved.getId());
+            id.setUserId(p.getId());
+            member.setId(id);
             member.setConversation(saved);
             member.setUser(p);
             member.setRole(ConversationParticipant.Role.MEMBER);
