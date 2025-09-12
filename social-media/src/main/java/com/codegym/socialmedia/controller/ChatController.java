@@ -49,6 +49,8 @@ public class ChatController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired private ConversationParticipantRepository participantRepository;
+
     @PostMapping("/api/chat/search-users-for-group")
     @ResponseBody
     public ResponseEntity<List<UserSearchDto>> searchUsersForGroup(@RequestParam("query") String q) {
@@ -191,6 +193,19 @@ public class ChatController {
 
             messagingTemplate.convertAndSend("/topic/conversation/" + msg.getConversationId(), msg);
 
+            List<ConversationParticipant> participants =
+                    participantRepository.findByConversationId(conversationId);
+            for (ConversationParticipant p : participants) {
+                if (!p.getUser().getId().equals(me)) {
+                    long totalUnread = chatService.getTotalUnread(me);
+                    long unreadCount = chatService.getUnreadCount(conversationId, me);
+                    messagingTemplate.convertAndSendToUser(
+                            p.getUser().getId().toString(),
+                            "/queue/unread",
+                            new UnreadNotification(conversationId, unreadCount, totalUnread)
+                    );
+                }
+            }
             res.put("success", true);
             res.put("message", msg);
             return ResponseEntity.ok(res);

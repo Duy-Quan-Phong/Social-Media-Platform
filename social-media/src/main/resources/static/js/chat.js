@@ -154,6 +154,11 @@ class ChatManager {
             this.handleIncomingMessage(messageData);
         });
         this.subscriptions.set(conversationId, sub); // Store the subscription
+
+        stompClient.subscribe("/user/queue/unread", (message) => {
+            const data = JSON.parse(message.body);
+            console.error(data);
+        });
     }
 
     async findOrCreateConversation(targetUserId) {
