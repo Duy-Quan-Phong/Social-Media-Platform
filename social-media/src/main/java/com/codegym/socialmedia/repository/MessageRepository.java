@@ -15,13 +15,13 @@ import java.util.Optional;
 public interface MessageRepository extends JpaRepository<Message, Integer> {
 
     @Query("""
-                SELECT m FROM Message m
-                WHERE m.conversation.id = :conversationId
-                ORDER BY m.sentAt ASC, m.messageId ASC
-            """)
+        SELECT m FROM Message m
+        WHERE m.conversation.id = :conversationId
+        ORDER BY m.sentAt DESC 
+    """)
     Page<Message> findMessagesByConversationId(@Param("conversationId") Long conversationId, Pageable pageable);
 
-    @Query("SELECT MAX(m.messageId) FROM Message m WHERE m.conversation.id = :conversationId")
+   @Query("SELECT MAX(m.messageId) FROM Message m WHERE m.conversation.id = :conversationId")
     Long findLatestMessageId(@Param("conversationId") Long conversationId);
 
     Message findFirstByConversationIdOrderBySentAtDescMessageIdDesc(Long conversationId);
