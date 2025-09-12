@@ -13,7 +13,7 @@ class ChatManager {
         this.chatBubbles = new Map();
         this.conversationCache = new Map();
         this.pendingFiles = {};
-        this.subscriptions = new Map(); //  Track subscriptions per conversation
+        this.subscriptions = new Map(); // Track subscriptions per conversation
         this.currentPages = new Map();
         this.hasMore = new Map();
         this.isLoadingHistory = new Map();
@@ -53,7 +53,6 @@ class ChatManager {
     }
 
     async openChat(targetKey, displayName, avatar, type = 'private') {
-
         let chatType = (type || 'private').toLowerCase();
         let domKey = String(targetKey);
 
@@ -94,7 +93,7 @@ class ChatManager {
         const chatWin = this.createChatWindow(domKey, displayName, avatar, chatType, convDto);
         document.getElementById('chatWindowsContainer').appendChild(chatWin);
         this.openChats.set(domKey, chatWin);
-        await this.loadConversationHistory(domKey);
+        await this.loadHistory(domKey, 0, true);
 
         if (chatType === 'group') this.loadGroupParticipants(domKey);
 
@@ -111,10 +110,8 @@ class ChatManager {
         }
     }
 
-
     async openExistingConversation(conversationId, name, avatar, type) {
         const id = String(conversationId);
-        console.log("conversationId in openExistingConversation: ", conversationId)
         if (this.openChats.has(id)) {
             const existing = this.openChats.get(id);
             existing.style.display = 'flex';
@@ -134,7 +131,7 @@ class ChatManager {
         document.getElementById('chatWindowsContainer').appendChild(chatWin);
         this.openChats.set(id, chatWin);
 
-        setTimeout(() => this.loadConversationHistory(id), 100);
+        setTimeout(() => this.loadHistory(id, 0, true), 100);
         if ((type || '').toLowerCase() === 'group') this.loadGroupParticipants(id);
 
         // Subscribe to the conversation topic for real-time messages
@@ -205,7 +202,7 @@ class ChatManager {
          </div>
       </div>
       <div class="chat-messages" id="messages-${chatId}">
-        <div class="message-time">Hôm nay</div>
+<!--        <div class="message-time">Hôm nay</div>-->
       </div>
       <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
       <div class="chat-input">
@@ -241,7 +238,8 @@ class ChatManager {
         if (this.isLoadingHistory.get(conversationId)) return;
 
         if (box.scrollTop < 100 && this.hasMore.get(conversationId)) {
-            this.loadMoreHistory(conversationId);
+            const page = (this.currentPages.get(conversationId) || 0) + 1;
+            this.loadHistory(conversationId, page, false);
         }
     }
 
@@ -374,86 +372,70 @@ class ChatManager {
         }
     }
 
-    async loadConversationHistory(conversationId) {
-        this.currentPages.set(conversationId, 0);
-        this.isLoadingHistory.set(conversationId, false);
-
-        try {
-            const res = await fetch(`/api/chat/conversation/${conversationId}/messages?page=0&size=20`);
-            if (!res.ok) throw new Error('Failed to load history');
-            let messages = await res.json();
-            const box = document.getElementById(`messages-${conversationId}`);
-            if (!box) return;
-            const timeDiv = box.querySelector('.message-time');
-            box.innerHTML = '';
-            if (timeDiv) box.appendChild(timeDiv);
-            const me = String(getCurrentUserId());
-
-            for (let i = messages.length - 1; i >= 0; i--) {
-                const m = messages[i];
-                const mine = String(m.senderId) === me;
-                if (mine) {
-                    this.addMessageToUI(conversationId, m, 'sent');
-                } else {
-                    this.addMessageToUI(conversationId, m, 'received', {
-                        name: m.senderName,
-                        avatar: m.senderAvatar
-                    });
-                }
-            }
-
-            box.scrollTop = box.scrollHeight;
-            this.hasMore.set(conversationId, messages.length === 20);
-        } catch (e) {
-            console.error(e);
-            this.toast('Lỗi tải lịch sử chat', 'error');
+    async loadHistory(conversationId, page, isInitial = false) {
+        if (isInitial) {
+            this.currentPages.set(conversationId, 0);
+            this.hasMore.set(conversationId, false);
+            this.isLoadingHistory.set(conversationId, false);
+        } else {
+            if (this.isLoadingHistory.get(conversationId)) return;
+            this.isLoadingHistory.set(conversationId, true);
         }
-    }
 
-    async loadMoreHistory(conversationId) {
-        this.isLoadingHistory.set(conversationId, true);
-        const page = this.currentPages.get(conversationId) + 1;
         const box = document.getElementById(`messages-${conversationId}`);
         if (!box) {
-            this.isLoadingHistory.set(conversationId, false);
+            if (!isInitial) this.isLoadingHistory.set(conversationId, false);
             return;
         }
 
-        // Add loader
-        const loader = document.createElement('div');
-        loader.className = 'message-loader';
-        loader.textContent = 'Đang tải thêm...';
-        box.insertBefore(loader, box.firstChild);
+        let loader = null;
+        if (!isInitial) {
+            loader = document.createElement('div');
+            loader.className = 'message-loader';
+            loader.textContent = 'Đang tải thêm...';
+            box.insertBefore(loader, box.firstChild);
+        }
 
         const oldScrollHeight = box.scrollHeight;
 
         try {
             const res = await fetch(`/api/chat/conversation/${conversationId}/messages?page=${page}&size=20`);
-            if (!res.ok) throw new Error('Failed to load more history');
+            if (!res.ok) throw new Error('Failed to load history');
             const messages = await res.json();
 
-            if (messages.length > 0) {
-                const fragment = document.createDocumentFragment();
-                for (let i = messages.length - 1; i >= 0; i--) {
-                    const m = messages[i];
-                    const me = String(this.getCurrentUserId());
-                    const type = String(m.senderId) === me ? 'sent' : 'received';
-                    const sender = type === 'received' ? { name: m.senderName, avatar: m.senderAvatar } : null;
-                    const row = this.createMessageRow(m, type, sender);
-                    fragment.appendChild(row);
-                }
-                box.insertBefore(fragment, loader.nextSibling); // Insert after loader
+            if (isInitial) {
+                box.innerHTML = '';
+            }
+
+            const fragment = document.createDocumentFragment();
+            const me = String(getCurrentUserId());
+
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const m = messages[i];
+                const type = String(m.senderId) === me ? 'sent' : 'received';
+                const sender = type === 'received' ? { name: m.senderName, avatar: m.senderAvatar } : null;
+                const row = this.createMessageRow(m, type, sender);
+                fragment.appendChild(row);
+            }
+
+            if (isInitial) {
+                box.appendChild(fragment);
+                box.scrollTop = box.scrollHeight;
+            } else {
+                box.insertBefore(fragment, loader.nextSibling);
                 const newScrollHeight = box.scrollHeight;
                 box.scrollTop += (newScrollHeight - oldScrollHeight);
             }
 
             this.hasMore.set(conversationId, messages.length === 20);
-            this.currentPages.set(conversationId, page);
+            if (!isInitial) {
+                this.currentPages.set(conversationId, page);
+            }
         } catch (e) {
             console.error(e);
-            this.toast('Lỗi tải thêm lịch sử chat', 'error');
+            this.toast('Lỗi tải lịch sử chat', 'error');
         } finally {
-            loader.remove();
+            if (loader) loader.remove();
             this.isLoadingHistory.set(conversationId, false);
         }
     }
@@ -488,7 +470,6 @@ class ChatManager {
         box.appendChild(row);
         box.scrollTop = box.scrollHeight;
     }
-
 
     renderMessage(message) {
         let html = '';
