@@ -154,11 +154,6 @@ class ChatManager {
             this.handleIncomingMessage(messageData);
         });
         this.subscriptions.set(conversationId, sub); // Store the subscription
-
-        stompClient.subscribe("/user/queue/unread", (message) => {
-            const data = JSON.parse(message.body);
-            console.error(data);
-        });
     }
 
     async findOrCreateConversation(targetUserId) {
@@ -914,6 +909,16 @@ function connectStompClient() {
             const invite = JSON.parse(message.body);
             const url = `/video_call/${invite.conversationId}?isIncoming=true&callerId=${invite.callerId}`;
             window.open(url, `VideoPopup${invite.conversationId}`, 'width=1070,height=600,resizable=yes,scrollbars=no');
+        });
+
+        // Thêm subscribe unread
+        stompClient.subscribe("/user/queue/unread", (message) => {
+            const data = JSON.parse(message.body);
+            updateMessageBadge(data.totalUnread);
+            document.querySelectorAll(`.span-conversation-id-${data.conversationId}`).forEach(el => {
+                el.textContent = data.unreadCount;
+            });
+
         });
     }, (error) => {
         console.error("Stomp connection error:", error);

@@ -138,7 +138,7 @@ class MessageDropdown {
             : 'Chưa có tin nhắn • Vừa tạo';
 
         const unreadBadge = friend.unreadCount && friend.unreadCount > 0
-            ? `<span class="badge bg-danger ms-2">${friend.unreadCount}</span>`
+            ? `<span class="badge bg-danger ms-2 span-conversation-id-${friend.id}">${friend.unreadCount}</span>`
             : '';
 
         return `
@@ -388,10 +388,6 @@ class MessageDropdown {
             document.head.appendChild(style);
         }
     }
-
-
-
-
 }
 async function fetchTotalUnread() {
     try {

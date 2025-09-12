@@ -196,11 +196,13 @@ public class ChatController {
             List<ConversationParticipant> participants =
                     participantRepository.findByConversationId(conversationId);
             for (ConversationParticipant p : participants) {
-                if (!p.getUser().getId().equals(me)) {
-                    long totalUnread = chatService.getTotalUnread(me);
-                    long unreadCount = chatService.getUnreadCount(conversationId, me);
+                Long pid = p.getUser().getId();
+                if (!pid.equals(me)) {
+                    long totalUnread = chatService.getTotalUnread(pid);
+                    long unreadCount = chatService.getUnreadCount(conversationId, pid);
+                    String username = p.getUser().getUsername();
                     messagingTemplate.convertAndSendToUser(
-                            p.getUser().getId().toString(),
+                            username,
                             "/queue/unread",
                             new UnreadNotification(conversationId, unreadCount, totalUnread)
                     );
