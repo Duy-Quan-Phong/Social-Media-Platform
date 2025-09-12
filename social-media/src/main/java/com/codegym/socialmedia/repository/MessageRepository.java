@@ -17,16 +17,10 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
     @Query("""
         SELECT m FROM Message m
         WHERE m.conversation.id = :conversationId
-        ORDER BY m.sentAt ASC, m.messageId ASC
+        ORDER BY m.sentAt DESC 
     """)
     Page<Message> findMessagesByConversationId(@Param("conversationId") Long conversationId, Pageable pageable);
 
-//    @Query("""
-//        SELECT m FROM Message m
-//        WHERE m.conversation.id = :conversationId
-//        ORDER BY m.sentAt DESC, m.messageId DESC
-//    """)
-//    Message findLatestMessageByConversationId(@Param("conversationId") Long conversationId);
 Message findFirstByConversationIdOrderBySentAtDescMessageIdDesc(Long conversationId);
 
 

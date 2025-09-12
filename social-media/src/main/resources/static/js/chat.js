@@ -8,6 +8,9 @@ class ChatManager {
         this.conversationCache = new Map();
         this.pendingFiles = {};
         this.subscriptions = new Map(); //  Track subscriptions per conversation
+        this.currentPages = new Map();
+        this.hasMore = new Map();
+        this.isLoadingHistory = new Map();
         this.maxChats = 3;
         this.maxBubbles = 4;
         this.compactBubbleId = 'chat-bubble-compact';
@@ -209,7 +212,23 @@ class ChatManager {
       </div>
       <emoji-picker id="emojiPicker-${chatId}" class="emoji-popup" style="display:none;"></emoji-picker>
     `;
+
+        // Setup scroll listener for infinite scrolling
+        const messagesBox = wrap.querySelector(`#messages-${chatId}`);
+        messagesBox.addEventListener('scroll', () => this.handleScroll(chatId));
+
         return wrap;
+    }
+
+    handleScroll(conversationId) {
+        const box = document.getElementById(`messages-${conversationId}`);
+        if (!box) return;
+
+        if (this.isLoadingHistory.get(conversationId)) return;
+
+        if (box.scrollTop < 100 && this.hasMore.get(conversationId)) {
+            this.loadMoreHistory(conversationId);
+        }
     }
 
     minimizeChat(conversationId) {
@@ -342,6 +361,9 @@ class ChatManager {
     }
 
     async loadConversationHistory(conversationId) {
+        this.currentPages.set(conversationId, 0);
+        this.isLoadingHistory.set(conversationId, false);
+
         try {
             const res = await fetch(`/api/chat/conversation/${conversationId}/messages?page=0&size=20`);
             if (!res.ok) throw new Error('Failed to load history');
@@ -353,7 +375,8 @@ class ChatManager {
             if (timeDiv) box.appendChild(timeDiv);
             const me = String(this.getCurrentUserId());
 
-            (messages || []).forEach(m => {
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const m = messages[i];
                 const mine = String(m.senderId) === me;
                 if (mine) {
                     this.addMessageToUI(conversationId, m, 'sent');
@@ -363,19 +386,65 @@ class ChatManager {
                         avatar: m.senderAvatar
                     });
                 }
-            });
+            }
 
             box.scrollTop = box.scrollHeight;
+            this.hasMore.set(conversationId, messages.length === 20);
         } catch (e) {
             console.error(e);
             this.toast('Lỗi tải lịch sử chat', 'error');
         }
     }
 
-    addMessageToUI(conversationId, message, type, sender = null) {
+    async loadMoreHistory(conversationId) {
+        this.isLoadingHistory.set(conversationId, true);
+        const page = this.currentPages.get(conversationId) + 1;
         const box = document.getElementById(`messages-${conversationId}`);
-        if (!box) return;
+        if (!box) {
+            this.isLoadingHistory.set(conversationId, false);
+            return;
+        }
 
+        // Add loader
+        const loader = document.createElement('div');
+        loader.className = 'message-loader';
+        loader.textContent = 'Đang tải thêm...';
+        box.insertBefore(loader, box.firstChild);
+
+        const oldScrollHeight = box.scrollHeight;
+
+        try {
+            const res = await fetch(`/api/chat/conversation/${conversationId}/messages?page=${page}&size=20`);
+            if (!res.ok) throw new Error('Failed to load more history');
+            const messages = await res.json();
+
+            if (messages.length > 0) {
+                const fragment = document.createDocumentFragment();
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const m = messages[i];
+                    const me = String(this.getCurrentUserId());
+                    const type = String(m.senderId) === me ? 'sent' : 'received';
+                    const sender = type === 'received' ? { name: m.senderName, avatar: m.senderAvatar } : null;
+                    const row = this.createMessageRow(m, type, sender);
+                    fragment.appendChild(row);
+                }
+                box.insertBefore(fragment, loader.nextSibling); // Insert after loader
+                const newScrollHeight = box.scrollHeight;
+                box.scrollTop += (newScrollHeight - oldScrollHeight);
+            }
+
+            this.hasMore.set(conversationId, messages.length === 20);
+            this.currentPages.set(conversationId, page);
+        } catch (e) {
+            console.error(e);
+            this.toast('Lỗi tải thêm lịch sử chat', 'error');
+        } finally {
+            loader.remove();
+            this.isLoadingHistory.set(conversationId, false);
+        }
+    }
+
+    createMessageRow(message, type, sender = null) {
         const row = document.createElement('div');
         row.className = `message ${type}`;
         const el = this.renderMessage(message);
@@ -394,6 +463,14 @@ class ChatManager {
             </div>`;
         }
 
+        return row;
+    }
+
+    addMessageToUI(conversationId, message, type, sender = null) {
+        const box = document.getElementById(`messages-${conversationId}`);
+        if (!box) return;
+
+        const row = this.createMessageRow(message, type, sender);
         box.appendChild(row);
         box.scrollTop = box.scrollHeight;
     }
