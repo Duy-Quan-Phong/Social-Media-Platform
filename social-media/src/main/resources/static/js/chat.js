@@ -692,7 +692,7 @@ class ChatManager {
                 }
 
                 el.innerHTML = friends.map(f => {
-                    const spanStyle = f.unreadCount && f.unreadCount > 0 ? 'display: block;' : 'display: none;';
+                    const spanStyle = f.unreadCount && f.unreadCount > 0 ? '' : 'display: none;';
                     return `<div class="friend-item-enhanced" 
                        onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
                     <div style="position:relative">

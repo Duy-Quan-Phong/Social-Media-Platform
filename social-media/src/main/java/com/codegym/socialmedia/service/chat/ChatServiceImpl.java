@@ -264,32 +264,6 @@ public class ChatServiceImpl implements ChatService {
                 .map(c -> {
                     ConversationDto dto = mapToConversationDto(c, userId);
 
-                    // Thêm thông tin bổ sung cho groups
-                    List<ConversationParticipant> participants =
-                            participantRepository.findByConversationId(c.getId());
-
-                    dto.setParticipantCount(participants.size());
-                    dto.setParticipants(participants.stream()
-                            .map(this::mapParticipantDto)
-                            .collect(Collectors.toList()));
-
-                    // Lấy tin nhắn cuối
-                    Message lastMessage = messageRepository
-                            .findFirstByConversationIdOrderBySentAtDescMessageIdDesc(c.getId());
-                    if (lastMessage != null) {
-                        dto.setLastMessage(formatLastMessage(lastMessage));
-                        dto.setTimeAgo(formatTimeAgo(lastMessage.getSentAt()));
-                        dto.setLastMessageTime(lastMessage.getSentAt());
-                    } else {
-                        dto.setLastMessage("Chưa có tin nhắn");
-                        dto.setTimeAgo("Vừa tạo");
-                    }
-
-                    // Kiểm tra tin nhắn chưa đọc
-                    long unreadCount = messageRepository.countUnreadMessages(c.getId(), userId);
-                    dto.setUnreadCount((int) unreadCount);
-                    dto.setHasUnread(unreadCount > 0);
-
                     return dto;
                 })
                 .sorted((a, b) -> {

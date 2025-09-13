@@ -30,7 +30,7 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
     // đếm tin NHẬN chưa đọc cho user: chưa có bản ghi MessageRead tương ứng
     @Query("SELECT COUNT(m) FROM Message m " +
             "WHERE m.conversation.id = :conversationId " +
-            "AND m.messageId > :lastReadId")
+            "AND m.messageId > COALESCE(:lastReadId, 0)")
     Long countUnreadMessages(@Param("conversationId") Long conversationId,
                              @Param("lastReadId") Long lastReadId);
 
