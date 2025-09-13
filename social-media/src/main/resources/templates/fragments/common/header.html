@@ -12,13 +12,11 @@
 
     <nav class="navbar navbar-expand-lg shadow-sm">
         <div class="container-fluid d-flex justify-content-between align-items-center px-3">
-
             <!-- LEFT: Logo + Search -->
             <div class="d-flex align-items-center" style="gap: 10px;">
                 <a class="navbar-brand me-2 logo" th:href="@{/news-feed}">
                     <img th:src="@{/images/2023_Facebook_icon.svg.webp}" alt="Facebook" height="42">
                 </a>
-
                 <form class="d-none d-md-block" role="search">
                     <input class="form-control form-control-sm" type="search" placeholder="Tìm kiếm..."
                            aria-label="Search">
@@ -28,18 +26,15 @@
             <!-- CENTER: Navigation icons -->
             <div class="d-none d-lg-flex justify-content-center align-items-center flex-grow-1 navigation-center ">
                 <a class="nav-link nav-icon nav-icon-wrapper" th:href="@{/news-feed}" title="Trang chủ"
-                   data-bs-toggle="tooltip"
-                   data-bs-placement="bottom">
+                   data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fas fa-home"></i>
                 </a>
                 <a class="nav-link nav-icon nav-icon-wrapper" th:href="@{/friends}" title="Bạn bè"
-                   data-bs-toggle="tooltip"
-                   data-bs-placement="bottom">
+                   data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fas fa-user-friends"></i>
                 </a>
                 <a class="nav-link nav-icon nav-icon-wrapper" href="#" title="Marketplace"
-                   data-bs-toggle="tooltip"
-                   data-bs-placement="bottom">
+                   data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fas fa-store"></i>
                 </a>
                 <a class="nav-link nav-icon nav-icon-wrapper" href="#" title="Nhóm" data-bs-toggle="tooltip"
@@ -48,20 +43,16 @@
                 </a>
             </div>
 
-
             <!-- RIGHT: Messages, Notifications, User -->
             <div class="d-flex align-items-center gap-3">
-
                 <!-- Icon Tin nhắn với dropdown -->
                 <div class="nav-icon-wrapper position-relative" id="messageIcon"
                      data-bs-toggle="tooltip" data-bs-placement="bottom" title="Tin nhắn">
                     <i class="fas fa-comment-dots fa-lg nav-icon"></i>
-
                     <!-- Badge tổng số tin chưa đọc -->
                     <span id="messageBadge"
                           class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                           style="font-size: 0.7rem; display: none;">0</span>
-
                     <!-- Message Dropdown -->
                     <div class="message-dropdown" id="messageDropdown">
                         <div class="dropdown-header">
@@ -80,27 +71,18 @@
                 <div class="dropdown">
                     <a id="notificationDropdown"
                        class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
-                       href="#"
-                       role="button"
-                       data-bs-toggle="dropdown"
-                       aria-expanded="false"
-                       data-bs-placement="bottom"
-                       title="Thông báo"
-                       style="text-decoration: none; color: white">
+                       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                       data-bs-placement="bottom" title="Thông báo" style="text-decoration: none; color: white">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-bell fa-lg"></i>
                             <span id="notificationCount" class="badge bg-danger"
                                   style="font-size: 0.7rem; position: absolute; top: -5px; right: -5px">0</span>
                         </div>
                     </a>
-
-                    <ul class="dropdown-menu dropdown-menu-end p-2"
-                        id="notificationList"
-                        aria-labelledby="notificationDropdown"
-                        style="max-height: 300px; overflow-y: auto; width: 400px;">
+                    <ul class="dropdown-menu dropdown-menu-end p-2" id="notificationList"
+                        aria-labelledby="notificationDropdown" style="max-height: 300px; overflow-y: auto; width: 400px;">
                     </ul>
                 </div>
-
 
                 <!-- Nếu đã đăng nhập -->
                 <div class="nav-item dropdown" sec:authorize="isAuthenticated()">
@@ -110,7 +92,6 @@
                         <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                              th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
                              class="rounded-circle nav-icon-wrapper"/>
-
                         <img th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                              th:src="@{/images/default-avatar.jpg}" alt="Avatar"
                              class="rounded-circle nav-icon-wrapper"/>
@@ -125,22 +106,17 @@
                             </a>
                         </li>
                         <li><a class="dropdown-item" th:href="@{/setting}">
-                            <i class="fas fa-cog icon"></i>
-                            Cài đặt</a></li>
-                        <li>
+                            <i class="fas fa-cog icon"></i> Cài đặt</a></li>
                         <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
                             <a class="dropdown-item" th:href="@{/admin/dashboard}">
-                                <i class="fas fa-user-shield icon"></i>
-                                Trang admin
+                                <i class="fas fa-user-shield icon"></i> Trang admin
                             </a>
                         </li>
                         <hr class="dropdown-divider">
-                        </li>
                         <li>
                             <form th:action="@{/logout}" method="post" style="margin: 0;">
                                 <button type="submit" class="dropdown-item text-danger">
-                                    <i class="fas fa-sign-out-alt icon"></i>
-                                    Đăng xuất
+                                    <i class="fas fa-sign-out-alt icon"></i> Đăng xuất
                                 </button>
                             </form>
                         </li>
@@ -155,12 +131,10 @@
                     </a>
                 </div>
             </div>
-
         </div>
     </nav>
 
-    <div data-bs-backdrop="false"
-         class="modal fade" id="createGroupModal" aria-hidden="true">
+    <div data-bs-backdrop="false" class="modal fade" id="createGroupModal" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -170,7 +144,6 @@
                 <div class="modal-body">
                     <label class="form-label">Tên nhóm</label>
                     <input id="cg-name" class="form-control mb-3" placeholder="Nhóm của tôi" value="Nhóm mới">
-
                     <label class="form-label">Thêm thành viên</label>
                     <input id="cg-search" class="form-control mb-2" placeholder="Gõ tên để tìm..."
                            oninput="searchUsersForGroup(this.value)">
@@ -180,7 +153,6 @@
                     <div id="cg-selected-list" class="border rounded p-2 mb-3"
                          style="max-height: 200px; overflow-y: auto;"></div>
                     <div class="small text-muted">Đã chọn: <span id="cg-picked">0</span> người</div>
-
                     <label class="form-label mt-3">Ảnh nhóm (tuỳ chọn)</label>
                     <input id="cg-avatar" type="file" accept="image/*" class="form-control">
                 </div>
@@ -191,6 +163,7 @@
             </div>
         </div>
     </div>
+
     <script th:inline="javascript">
         /*<![CDATA[*/
         const currentUserId = /*[[${#authentication.principal.id}]]*/ null;

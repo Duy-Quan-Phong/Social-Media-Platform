@@ -3,13 +3,10 @@ class MessageDropdown {
         this.messageIcon = document.getElementById('messageIcon');
         this.messageDropdown = document.getElementById('messageDropdown');
         this.conversationList = document.getElementById('conversationListHeader');
-
         this.isOpen = false;
         this.modal = null;
-
         // Danh sách user chọn để tạo nhóm - Giữ trong class thay vì global
         this.selectedUsers = new Map(); // Sử dụng Map để lưu thêm info: id -> {name, avatar}
-
         this.init();
     }
 
@@ -26,7 +23,6 @@ class MessageDropdown {
 
         this.messageIcon.removeAttribute('data-bs-toggle');
         this.messageIcon.removeAttribute('data-bs-target');
-
         this.setupEventListeners();
         this.addCreateGroupStyles();
     }
@@ -136,9 +132,7 @@ class MessageDropdown {
         const preview = friend.lastMessage
             ? `${friend.lastMessage} • ${friend.timeAgo || ''}`
             : 'Chưa có tin nhắn • Vừa tạo';
-
         const spanStyle = friend.unreadCount && friend.unreadCount > 0 ? '' : 'display: none;';
-
         return `
         <div class="conversation-item" 
              onclick="messageDropdown.openChat('${friend.id}', '${nameEsc}', '${avatar}', '${type}')">
@@ -159,7 +153,6 @@ class MessageDropdown {
     `;
     }
 
-
     openChat(id, name, avatar, type = 'private') {
         this.closeDropdown();
         if (typeof chatManager !== 'undefined') {
@@ -172,17 +165,14 @@ class MessageDropdown {
 
     showCreateGroupModal() {
         this.closeDropdown();
-
         // Reset form
         document.getElementById('cg-name').value = 'Nhóm mới';
         document.getElementById('cg-search').value = '';
         document.getElementById('cg-results').innerHTML =
             '<div class="text-muted text-center">Gõ tên để tìm bạn bè...</div>';
         document.getElementById('cg-avatar').value = '';
-
         this.selectedUsers.clear();
         this.updateSelectedUsersDisplay();
-
         if (this.modal) {
             this.modal.show();
         }
@@ -190,7 +180,6 @@ class MessageDropdown {
 
     async searchUsersForGroup(query) {
         const resultsDiv = document.getElementById('cg-results');
-
         if (!query || query.trim().length < 2) {
             resultsDiv.innerHTML = '<div class="text-muted text-center">Gõ ít nhất 2 ký tự để tìm...</div>';
             return;
@@ -199,12 +188,10 @@ class MessageDropdown {
             const response = await fetch(`/api/chat/search-friends?query=${encodeURIComponent(query)}`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const users = await response.json();
-
             if (users.length === 0) {
                 resultsDiv.innerHTML = '<div class="text-muted text-center">Không tìm thấy bạn bè nào</div>';
                 return;
             }
-
             let html = '';
             users.forEach(user => {
                 const isSelected = this.selectedUsers.has(user.id);
@@ -245,11 +232,9 @@ class MessageDropdown {
     updateSelectedUsersDisplay() {
         const countEl = document.getElementById('cg-picked');
         const listEl = document.getElementById('cg-selected-list'); // Giả sử có div này trong modal để hiển thị danh sách
-
         if (countEl) {
             countEl.textContent = this.selectedUsers.size;
         }
-
         if (listEl) {
             let html = '';
             if (this.selectedUsers.size === 0) {
@@ -272,7 +257,6 @@ class MessageDropdown {
         this.selectedUsers.delete(userId);
         element.remove();
         this.updateSelectedUsersDisplay();
-
         // Cập nhật lại item trong search results nếu đang hiển thị
         const searchItems = document.querySelectorAll('.user-search-item');
         searchItems.forEach(item => {
@@ -286,31 +270,24 @@ class MessageDropdown {
     async createGroup() {
         const groupName = document.getElementById('cg-name').value.trim() || 'Nhóm mới';
         const participantIds = Array.from(this.selectedUsers.keys());
-
         if (participantIds.length < 2) {
             alert('Vui lòng chọn ít nhất 2 thành viên');
             return;
         }
-
         const createBtn = document.getElementById('cg-create');
         createBtn.disabled = true;
         createBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tạo...';
-
         try {
             const response = await fetch('/api/chat/create-group-from-ids', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({groupName, participantIds})
             });
-
             const result = await response.json();
-
             if (result.success) {
                 let avatarUrl = "https://res.cloudinary.com/dryyvmkwo/image/upload/v1748588721/samples/cloudinary-group.jpg"; // Avatar mặc định ban đầu
-
                 // Upload avatar nếu có
                 const avatarFile = document.getElementById('cg-avatar').files[0];
-
                 const formData = new FormData();
                 formData.append('avatar', avatarFile);
                 const uploadResponse = await fetch(`/api/chat/conversation/${result.conversation.id}/avatar`, {
@@ -321,10 +298,7 @@ class MessageDropdown {
                 if (uploadResult.success && uploadResult.avatar) {
                     avatarUrl = uploadResult.avatar; // Cập nhật avatar mới
                 }
-
-
                 this.modal.hide();
-
                 if (window.chatManager) {
                     chatManager.openExistingConversation(
                         result.conversation.id,
@@ -333,7 +307,6 @@ class MessageDropdown {
                         'group'
                     );
                 }
-
                 if (window.newsFeedManager) {
                     newsFeedManager.loadGroupChats();
                 }
@@ -389,6 +362,7 @@ class MessageDropdown {
         }
     }
 }
+
 async function fetchTotalUnread() {
     try {
         const response = await fetch(`/api/chat/unread/total/${currentUserId}`, {
@@ -401,10 +375,10 @@ async function fetchTotalUnread() {
         console.error('Error fetching total unread:', err);
     }
 }
+
 function updateMessageBadge(totalUnread) {
     const badge = document.getElementById('messageBadge');
     if (!badge) return;
-
     if (totalUnread > 0) {
         badge.textContent = totalUnread;
         badge.style.display = 'inline-block';
@@ -412,6 +386,7 @@ function updateMessageBadge(totalUnread) {
         badge.style.display = 'none';
     }
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     window.messageDropdown = new MessageDropdown();
     window.searchUsersForGroup = (q) => messageDropdown.searchUsersForGroup(q);

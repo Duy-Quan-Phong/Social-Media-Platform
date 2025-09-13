@@ -7,7 +7,6 @@ class NewsFeedManager {
         this.loadGroupChats();
     }
 
-
     // Load nhóm
     async loadGroupChats() {
         const el = document.getElementById('groupChatsList');

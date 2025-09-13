@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta name="user-id" content="${currentUserId}">
     <meta name="_csrf" content="${_csrf.token}">
     <meta name="_csrf_header" content="${_csrf.headerName}">
-
     <title>Facebook</title>
     <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
     <link rel="stylesheet" th:href="@{/css/news-feed.css}">
     <link rel="stylesheet" th:href="@{/css/post.css}">
     <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 </head>
 <body>
 <div th:replace="~{fragments/common/header :: header}"></div>
@@ -35,7 +32,6 @@
                 <p class="user-role">Thành viên</p>
             </div>
         </div>
-
         <h3>Meta AI</h3>
         <a href="/friends" class="nav-item">
             <i class="fas fa-user-friends"></i>
@@ -71,17 +67,14 @@
     <div class="feed">
         <!-- Post Creator -->
         <div th:replace="fragments/post/post-form :: create-post-form"></div>
-
         <!-- Posts Feed -->
         <div id="posts-container">
             <!-- Posts will be loaded here dynamically -->
         </div>
-
         <!-- Loading indicator -->
         <div id="loading-indicator" class="text-center py-3" style="display: none;">
             <i class="fas fa-spinner fa-spin"></i> Đang tải...
         </div>
-
         <!-- No more posts indicator -->
         <div id="no-more-posts" class="text-center py-3 text-muted" style="display: none;">
             <i class="fas fa-check-circle"></i> Bạn đã xem hết tất cả bài viết
@@ -97,9 +90,7 @@
                 <i class="fas fa-spinner fa-spin"></i> Đang tải...
             </div>
         </div>
-
         <hr class="divider">
-
         <h5><i class="fas fa-comments"></i> Nhóm chat</h5>
         <div id="groupChatsList">
             <!-- Group chats will be loaded here -->
@@ -111,13 +102,10 @@
 </div>
 
 <div th:replace="fragments/chat-fragment :: chatContainers"></div>
-
-
 <!-- Edit Post Modal -->
 <div th:replace="fragments/post/post-form :: edit-post-form"></div>
 
 <script type="module" th:src="@{/js/post.js}"></script>
-
 <script th:inline="javascript">
     /*<![CDATA[*/
     const currentUser = /*[[${#authentication.principal.username}]]*/ 'defaultUser';
