@@ -137,9 +137,7 @@ class MessageDropdown {
             ? `${friend.lastMessage} • ${friend.timeAgo || ''}`
             : 'Chưa có tin nhắn • Vừa tạo';
 
-        const unreadBadge = friend.unreadCount && friend.unreadCount > 0
-            ? `<span class="badge bg-danger ms-2 span-conversation-id-${friend.id}">${friend.unreadCount}</span>`
-            : '';
+        const spanStyle = friend.unreadCount && friend.unreadCount > 0 ? '' : 'display: none;';
 
         return `
         <div class="conversation-item" 
@@ -151,7 +149,9 @@ class MessageDropdown {
             <div class="conversation-info">
                 <div class="conversation-name d-flex justify-content-between align-items-center">
                     <span>${friend.name}</span>
-                    ${unreadBadge}
+                     <span class="badge bg-danger ms-2 span-conversation-id-${friend.id}" style="${spanStyle}">
+                        ${friend.unreadCount}
+                      </span>
                 </div>
                 <div class="conversation-preview">${preview}</div>
             </div>

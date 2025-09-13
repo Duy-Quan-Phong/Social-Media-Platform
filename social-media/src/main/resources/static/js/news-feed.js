@@ -1,42 +1,14 @@
-// 1. Cập nhật news-feed.js - thêm loadGroupChats function
 class NewsFeedManager {
     constructor() {
         this.init();
     }
 
     init() {
-        this.loadOnlineFriends();
-        this.loadGroupChats(); // Thêm dòng này
+        this.loadGroupChats();
     }
 
-    async loadOnlineFriends() {
-        const el = document.getElementById('onlineFriendsList');
-        if (!el) return;
 
-        try {
-            const response = await fetch('/api/chat/online-friends');
-            const friends = await response.json();
-
-            if (!Array.isArray(friends) || friends.length === 0) {
-                el.innerHTML = `<div class="text-center p-3 text-muted">Không có bạn bè online</div>`;
-                return;
-            }
-
-            el.innerHTML = friends.map(f => `
-                <div class="friend-item-enhanced" onclick="openChat('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', 'private')">
-                    <div style="position:relative">
-                        <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
-                        ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
-                    </div>
-                    <span class="friend-name">${this.escape(f.name)}</span>
-                </div>`).join('');
-        } catch (error) {
-            console.error('Error loading friends:', error);
-            el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải danh sách</div>`;
-        }
-    }
-
-    // THÊM FUNCTION MỚI: Load Group Chats
+    // Load nhóm
     async loadGroupChats() {
         const el = document.getElementById('groupChatsList');
         if (!el) return;
@@ -51,7 +23,11 @@ class NewsFeedManager {
             }
 
             el.innerHTML = data.groups.map(group => `
-                <div class="group-item-enhanced" onclick="openGroup('${group.id}', '${this.escape(group.name)}', '${group.avatar || '/images/default-group-avatar.jpg'}')">
+                <div class="group-item-enhanced"
+                     data-id="${group.id}" 
+                     data-name="${this.escape(group.name)}"
+                     data-avatar="${group.avatar || '/images/default-group-avatar.jpg'}"
+                     data-type="group">
                     <div style="position:relative">
                         <img src="${group.avatar || '/images/default-group-avatar.jpg'}" class="group-avatar">
                         <div class="group-member-count">${group.participantCount || 0}</div>
@@ -62,12 +38,22 @@ class NewsFeedManager {
                         ${group.timeAgo ? `<div class="group-time">${group.timeAgo}</div>` : ''}
                     </div>
                 </div>`).join('');
+
+            // Gắn sự kiện click sau khi render
+            el.querySelectorAll('.group-item-enhanced').forEach(item => {
+                item.addEventListener('click', () => {
+                    const { id, name, avatar } = item.dataset;
+                    this.openGroup(id, name, avatar);
+                });
+            });
+
         } catch (error) {
             console.error('Error loading groups:', error);
             el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải nhóm</div>`;
         }
     }
 
+    // Escape string
     escape(str) {
         if (!str) return '';
         return String(str)
@@ -77,22 +63,22 @@ class NewsFeedManager {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
     }
-}
 
-// Global functions for chat integration
-function openChat(userId, name, avatar, type = 'private') {
-    if (window.chatManager) {
-        chatManager.openChat(userId, name, avatar, type);
+    // Gọi hàm chat
+    openChat(userId, name, avatar, type = 'private') {
+        if (window.chatManager) {
+            chatManager.openChat(userId, name, avatar, type);
+        }
+    }
+
+    openGroup(conversationId, name, avatar) {
+        if (window.chatManager) {
+            chatManager.openExistingConversation(conversationId, name, avatar, 'group');
+        }
     }
 }
 
-function openGroup(conversationId, name, avatar) {
-    if (window.chatManager) {
-        chatManager.openExistingConversation(conversationId, name, avatar, 'group');
-    }
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
+// Init
+document.addEventListener('DOMContentLoaded', () => {
     window.newsFeedManager = new NewsFeedManager();
 });

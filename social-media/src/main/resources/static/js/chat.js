@@ -103,7 +103,7 @@ class ChatManager {
 
     async markConversationAsRead(conversationId) {
         try {
-            await fetch(`/api/chat/mark-read/${conversationId}/${currentUserId}`, { method: 'POST' }); // TODO: userId động
+            await fetch(`/api/chat/mark-read/${conversationId}/${currentUserId}`, { method: 'POST' });
             await fetchTotalUnread(); // reload danh sách + badge
         } catch (e) {
             console.error('Error marking as read:', e);
@@ -133,6 +133,11 @@ class ChatManager {
 
         setTimeout(() => this.loadHistory(id, 0, true), 100);
         if ((type || '').toLowerCase() === 'group') this.loadGroupParticipants(id);
+
+        const badges = document.querySelectorAll(`.span-conversation-id-${conversationId}`);
+        badges.forEach(badge => {
+            badge.style.display = 'none';
+        });
 
         // Subscribe to the conversation topic for real-time messages
         this.subscribeToConversation(id);
@@ -674,25 +679,35 @@ class ChatManager {
         fetch('/api/chat/online-friends')
             .then(r => r.json())
             .then(data => {
-                const friends = data; // ✅ chỉ lấy friends
+                const friends = data;
+                if (!Array.isArray(friends)) {
+                    console.error('Invalid API response:', data);
+                    el.innerHTML = `<div class="text-center text-danger p-3">Dữ liệu không hợp lệ</div>`;
+                    return;
+                }
 
-                if (!Array.isArray(friends) || friends.length === 0) {
+                if (friends.length === 0) {
                     el.innerHTML = `<div class="text-center p-3 text-muted">Không có bạn bè online</div>`;
                     return;
                 }
 
-                el.innerHTML = friends.map(f => `
-                <div class="friend-item-enhanced" 
-                     onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
-                  <div style="position:relative">
-                    <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
-                    ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
-                  </div>
-                  <span class="friend-name">${this.escape(f.name)}</span>
-                </div>
-            `).join('');
+                el.innerHTML = friends.map(f => {
+                    const spanStyle = f.unreadCount && f.unreadCount > 0 ? 'display: block;' : 'display: none;';
+                    return `<div class="friend-item-enhanced" 
+                       onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
+                    <div style="position:relative">
+                      <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
+                      ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
+                    </div>
+                    <span class="friend-name">${this.escape(f.name)}</span>
+                    <span class="badge bg-danger ms-2 span-conversation-id-${f.id}" style="${spanStyle}">
+                        ${f.unreadCount || ''}
+                    </span>
+                </div>`;
+                }).join('');
             })
-            .catch(() => {
+            .catch(error => {
+                console.error('Error fetching online friends:', error);
                 el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải danh sách</div>`;
             });
     }
@@ -916,6 +931,7 @@ function connectStompClient() {
             const data = JSON.parse(message.body);
             updateMessageBadge(data.totalUnread);
             document.querySelectorAll(`.span-conversation-id-${data.conversationId}`).forEach(el => {
+                el.style.display = 'block';
                 el.textContent = data.unreadCount;
             });
 
