@@ -862,7 +862,6 @@ class ChatManager {
 
     handleUnreadMessage(data) {
         const checkOpen = () => {
-            console.log("Check:", data.conversationId, ChatManager.openChats, ChatManager.openChats.has(String(data.conversationId)));
             if (!ChatManager.openChats.has(String(data.conversationId))) {
                 updateMessageBadge(data.totalUnread);
                 document.querySelectorAll(`.span-conversation-id-${data.conversationId}`).forEach(el => {
