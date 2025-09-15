@@ -173,7 +173,11 @@ async function loadInitialNotifications() {
     try {
         const page = await fetchJson(`${API_BASE}?page=${currentPage}&size=${PAGE_SIZE}`);
         container.innerHTML = '';
-        page.content.forEach(n => container.appendChild(buildNotificationElement(n)));
+        if (page.totalElements > 0)  page.content.forEach(n => container.appendChild(buildNotificationElement(n)));
+        else {
+            container.innerHTML = `<li class="text-center small text-muted py-2">Không có thông báo</li>`;
+            return;
+        }
         // track paging
         if (!page.pageable || page.totalPages === undefined) {
             // fallback: if items < page size, mark no more

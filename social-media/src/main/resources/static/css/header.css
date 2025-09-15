@@ -198,3 +198,8 @@
 .nav-item .dropdown-toggle:focus {
     box-shadow: none !important;
 }
+
+.form-control-sm{
+    padding: 5px;
+    width: 250px;
+}
