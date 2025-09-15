@@ -11,22 +11,23 @@
     height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 20px;
+    padding: 0 15px; /* Giảm padding trên mobile */
 }
 
-
+/* Navigation Center */
 .navigation-center {
-    gap: 40px;
-    padding: 8px 20px;
+    gap: 20px; /* Giảm gap trên mobile */
+    padding: 8px 15px;
     border-radius: 10px;
     display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* ===== Nút icon điều hướng (dạng tròn) ===== */
+/* Navigation Icon Wrapper */
 .nav-icon-wrapper {
     background-color: #3a3b3c;
     border-radius: 50%;
-    /*padding: 16px; !* 👈 tăng padding để khung tròn to hơn *!*/
     width: 40px;
     height: 40px;
     display: flex;
@@ -48,14 +49,13 @@
 
 .nav-icon {
     color: white;
-    /*font-size: 24px; !* 👈 tăng kích thước icon nếu cần *!*/
     text-decoration: none;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-
+/* Navbar Brand (Logo) */
 .navbar-brand {
     font-weight: bold;
     color: white;
@@ -65,12 +65,19 @@
     color: #ddd;
 }
 
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+/* Navigation Links */
 .navigation-center a,
 .navigation-right a {
     font-size: 14px;
     border-radius: 5px;
     text-decoration: none;
-    padding: 8px 16px;  /* 👈 nhỏ gọn hơn */
+    padding: 8px 16px;
     color: #fff;
     display: flex;
     align-items: center;
@@ -79,10 +86,9 @@
     margin: 0 8px;
     letter-spacing: 0.5px;
     text-align: center;
-    transition: 0.3s ease;
+    transition: transform 0.3s ease;
     height: 40px;
 }
-
 
 .navigation-center a:hover,
 .navigation-right a:hover {
@@ -90,13 +96,14 @@
     transform: scale(1.1);
 }
 
-.logo {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #667eea;
+/* Search Input */
+.form-control-sm {
+    padding: 5px;
+    width: 250px;
+    font-size: 14px;
 }
 
-
+/* Dropdown Header */
 .dropdown-header {
     padding: 16px 20px;
     border-bottom: 1px solid #e4e6ea;
@@ -108,6 +115,7 @@
     color: #050505;
 }
 
+/* Conversation List */
 .conversation-list {
     max-height: 400px;
     overflow-y: auto;
@@ -164,7 +172,7 @@
     border-radius: 50%;
 }
 
-/* User avatar in header - improved styling */
+/* User Avatar */
 .user-avatar {
     width: 40px;
     height: 40px;
@@ -179,7 +187,7 @@
     transform: scale(1.05);
 }
 
-/* Dropdown avatar styling */
+/* Dropdown Avatar */
 .dropdown-avatar {
     width: 32px;
     height: 32px;
@@ -188,7 +196,7 @@
     border: 1px solid #ddd;
 }
 
-/* Remove the old nav-icon-wrapper style for user avatar */
+/* Remove default dropdown toggle styles */
 .nav-item .dropdown-toggle {
     border: none !important;
     background: none !important;
@@ -199,7 +207,179 @@
     box-shadow: none !important;
 }
 
-.form-control-sm{
-    padding: 5px;
-    width: 250px;
+/* Responsive Adjustments */
+@media (max-width: 991px) {
+    .navigation-center {
+        display: none; /* Ẩn navigation-center trên tablet/mobile */
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 10px;
+    }
+
+    .form-control-sm {
+        width: 200px;
+    }
+
+    .navigation-center a,
+    .navigation-right a {
+        font-size: 13px;
+        padding: 6px 12px;
+        height: 36px;
+    }
+
+    .dropdown-title {
+        font-size: 20px;
+    }
+
+    .conversation-list {
+        max-height: 350px;
+    }
+
+    .conversation-item {
+        padding: 10px 14px;
+    }
+
+    .conversation-avatar {
+        width: 48px;
+        height: 48px;
+        margin-right: 10px;
+    }
+
+    .conversation-preview {
+        font-size: 12px;
+    }
+
+    .online-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .dropdown-avatar {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar {
+        padding: 0 5px;
+        height: 56px; /* Thu nhỏ navbar nếu cần */
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    .form-control-sm {
+        width: 150px;
+    }
+
+    .nav-icon-wrapper {
+        width: 36px;
+        height: 36px;
+    }
+
+    .navigation-center a,
+    .navigation-right a {
+        font-size: 12px;
+        padding: 5px 10px;
+        height: 32px;
+    }
+
+    .dropdown-header {
+        padding: 12px 16px;
+    }
+
+    .dropdown-title {
+        font-size: 18px;
+    }
+
+    .conversation-list {
+        max-height: 300px;
+    }
+
+    .conversation-item {
+        padding: 8px 12px;
+    }
+
+    .conversation-avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+    }
+
+    .online-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .dropdown-avatar {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Full width dropdowns on mobile */
+    .dropdown-menu {
+        position: fixed !important; /* Chuyển sang fixed để tránh che khuất và full viewport */
+        top: 56px !important; /* Dựa trên height navbar mobile */
+        left: 0 !important;
+        right: auto !important;
+        width: 100vw !important;
+        max-width: none !important;
+        max-height: calc(100vh - 56px) !important; /* Chiếm hết chiều cao còn lại */
+        overflow-y: auto !important;
+        border-radius: 0 !important; /* Loại bỏ góc bo để full */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important; /* Thêm shadow cho nổi bật */
+        z-index: 1050 !important; /* Cao hơn navbar để không bị che */
+        transition: opacity 0.3s ease !important;
+    }
+
+    .dropdown-menu.show {
+        opacity: 1;
+    }
+
+    /* Specific for menuList, notificationList, user dropdown */
+    #menuList,
+    #notificationList,
+    .nav-item.dropdown .dropdown-menu {
+        left: 0 !important;
+        transform: none !important;
+    }
+
+    /* Custom message dropdown */
+    #messageDropdown {
+        position: fixed !important;
+        top: 56px !important;
+        left: 0 !important;
+        width: 100vw !important;
+        max-height: calc(100vh - 56px) !important;
+        overflow-y: auto !important;
+        border-radius: 0 !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+        z-index: 1050 !important;
+        background: #fff !important; /* Đảm bảo background trắng để nổi bật */
+        transition: opacity 0.3s ease !important;
+    }
+
+    #messageDropdown.show {
+        opacity: 1;
+    }
+
+    /* Đảm bảo dropdown không bị che bởi modal hoặc nội dung khác */
+    .modal {
+        z-index: 1060 !important; /* Cao hơn dropdown nếu cần */
+    }
 }
