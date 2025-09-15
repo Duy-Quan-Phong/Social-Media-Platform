@@ -202,7 +202,8 @@
             tooltipTriggerList.map(function (el) {
                 return new bootstrap.Tooltip(el, {
                     placement: 'bottom',          // luôn nằm dưới
-                    fallbackPlacements: []        // không cho nó tự động đổi hướng
+                    fallbackPlacements: []  ,
+                    trigger: 'hover'
                 });
             });
 
