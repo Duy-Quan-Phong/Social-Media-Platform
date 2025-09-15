@@ -37,14 +37,6 @@ body {
 }
 
 
-@media (max-width: 768px) {
-    .container {
-        width: 100%;
-        padding: 10px;
-        min-height: 0;
-    }
-}
-
 .container p {
     font-size: 14px;
     line-height: 20px;
@@ -300,4 +292,175 @@ body {
 
 .facebook-btn:hover {
     background-color: #2d4373;
+}
+
+/* Media query cho responsive (màn hình nhỏ hơn 768px, ví dụ mobile) */
+@media (max-width: 768px) {
+    body {
+        padding: 20px;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .container {
+        width: 100%;
+        max-width: none;
+        min-height: auto;
+        height: auto;
+        border-radius: 20px;
+        padding: 0;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+        position: inherit !important;
+    }
+
+    .form-container {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: auto;
+        transition: opacity 0.6s ease-in-out;
+        padding: 20px;
+    }
+
+    .sign-in {
+        transform: none;
+        opacity: 1;
+        z-index: 2;
+        display: block;
+    }
+
+    .container.active .sign-in {
+        transform: none;
+        opacity: 0;
+        z-index: 1;
+        display: none; /* Ẩn hoàn toàn để tránh chồng chéo */
+    }
+
+    .sign-up {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transform: none;
+        opacity: 0;
+        z-index: 1;
+        display: none;
+    }
+
+    .container.active .sign-up {
+        transform: none;
+        opacity: 1;
+        z-index: 2;
+        display: contents;
+        animation: none; /* Tắt animation để đơn giản trên mobile */
+    }
+
+    .container form {
+        padding: 20px;
+    }
+
+    .container form h1 {
+        margin-top: 0;
+    }
+
+    .toggle-container,.container.active .toggle-container {
+        position: relative !important;
+        top: auto !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        border-radius: 20px 20px 0 0 !important;
+        z-index: 1000 !important;
+        order: -1 !important; /* Đặt toggle ở trên form */
+        transform: none;
+    }
+
+    .toggle {
+        position: relative;
+        left: 0;
+        width: 100%;
+        height: auto;
+        transform: none;
+        background: linear-gradient(to bottom, #0055ff, #043873); /* Gradient dọc cho mobile */
+        padding: 20px 0;
+    }
+
+    .container.active .toggle {
+        transform: none;
+    }
+
+    .toggle-panel {
+        position: relative;
+        width: 100%;
+        height: auto;
+        transform: none;
+        padding: 15px; /* Giảm padding để tiết kiệm không gian trên mobile */
+        display: none; /* Mặc định ẩn cả hai, chỉ hiển thị cái cần */
+    }
+
+    .toggle-left {
+        transform: none;
+    }
+
+    .container.active .toggle-left {
+        transform: none;
+        display: flex;
+    }
+
+    .toggle-right {
+        transform: none;
+        display: flex;
+    }
+
+    .container.active .toggle-right {
+        transform: none;
+        display: none;
+    }
+
+    .container button.hidden {
+        display: block !important; /* Buộc hiển thị button để switch trên mobile */
+        background-color: transparent;
+        border: 1px solid #fff;
+        color: #fff;
+        padding: 10px 30px;
+        margin-top: 10px;
+    }
+
+    .social-icons {
+        display: flex;
+        justify-content: center;
+    }
+
+    .alert, .error-message {
+        font-size: 12px;
+    }
+}
+
+/* Media query cho màn hình rất nhỏ (max-width: 480px) để tinh chỉnh thêm */
+@media (max-width: 480px) {
+    .container button {
+        padding: 10px 30px;
+        font-size: 11px;
+    }
+
+    .container input {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .container p, .container a {
+        font-size: 12px;
+    }
+
+    .toggle-panel h1 {
+        font-size: 20px;
+    }
+
+    .toggle-panel p {
+        font-size: 12px;
+    }
 }
