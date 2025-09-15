@@ -429,7 +429,7 @@ textarea.form-control {
     --text-primary: #050505;
     --text-secondary: #65676b;
     --divider: #e4e6eb;
-    --hover-bg: #f2f2f2;
+    --hover-bg: #cc6262;
     --active-bg: #e5e7eb;
 }
 
@@ -465,33 +465,6 @@ body {
     color: var(--text-secondary);
 }
 
-.nav-item {
-    display: flex;
-    align-items: center;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    text-decoration: none;
-    color: var(--text-primary);
-}
-
-.body-item{
-    padding: 10px;
-    margin-bottom: 5px;
-}
-
-.nav-item:hover {
-    background-color: var(--hover-bg);
-    text-decoration: none;
-    color: var(--text-primary);
-}
-
-.nav-item i {
-    margin-right: 10px;
-    font-size: 20px;
-    width: 24px;
-    text-align: center;
-}
 
 /* Main Content */
 .feed {
