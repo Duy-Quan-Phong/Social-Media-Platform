@@ -1,4 +1,5 @@
 package com.codegym.socialmedia.model.account;
+
 import com.codegym.socialmedia.general_interface.NormalRegister;
 import com.codegym.socialmedia.model.admin.ModerationLog;
 import com.codegym.socialmedia.model.conversation.ConversationParticipant;
@@ -56,8 +57,8 @@ public class User {
 
     @NotBlank(groups = NormalRegister.class)
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[6,8,9]|7[0,6-9]|8[1-5]|9[0-9])\\d{7}$"
-            ,message = "Sai định dạng"
-            ,groups = NormalRegister.class
+            , message = "Sai định dạng"
+            , groups = NormalRegister.class
     )
     @Column(unique = true)
     private String phone;
@@ -146,9 +147,11 @@ public class User {
     }
 
     public boolean isAdmin() {
-        return  this.roles.stream()
+        return this.roles.stream()
                 .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
     }
 
-
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }

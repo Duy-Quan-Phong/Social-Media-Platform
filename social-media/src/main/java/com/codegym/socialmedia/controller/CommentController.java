@@ -3,7 +3,9 @@ package com.codegym.socialmedia.controller;
 import com.codegym.socialmedia.dto.comment.CommentRequest;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
+import com.codegym.socialmedia.model.social_action.CommentMention;
 import com.codegym.socialmedia.model.social_action.PostComment;
+import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.notification.PostMessage;
 import com.codegym.socialmedia.service.post.PostCommentService;
@@ -30,13 +32,15 @@ public class CommentController {
     private final PostCommentService postCommentService;
     @Autowired
     private final UserService userService;
+
     @Autowired
     private FriendshipService friendshipService;
 
     @PostMapping("/add")
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
-        PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentions());
-        DisplayCommentDTO newComment = new DisplayCommentDTO(saved, false);
+        PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
+
+        DisplayCommentDTO newComment = new DisplayCommentDTO(saved, false,userService.getAllUsersByIds(req.getMentionedUserIds()));
         newComment.setCanEdit(true);
         newComment.setCanDeleted(true);
         newComment.setCanReply(true);
@@ -54,19 +58,20 @@ public class CommentController {
     public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent());
-        return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
+        return DisplayCommentDTO.mapToDTO(updated, currentUser,userService.getAllUsersByIds(req.getMentionedUserIds()), friendshipService); // trả về DTO với quyền
     }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteComment(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
 
         PostComment deletedComment = postCommentService.deleteComment(id, currentUser);
-        if (deletedComment!=null) {
+        if (deletedComment != null) {
             // Trả về DTO
-            DisplayCommentDTO dto = new DisplayCommentDTO(deletedComment, false);
+//            DisplayCommentDTO dto = new DisplayCommentDTO(deletedComment, false);
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "deletedComment", dto
+                    "deletedComment", deletedComment
             ));
         } else {
             return ResponseEntity.status(403).body(Map.of(

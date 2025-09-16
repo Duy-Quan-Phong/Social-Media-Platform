@@ -8,5 +8,5 @@ import java.util.List;
 public class CommentRequest {
     private Long postId;
     private String content;
-    private List<Long> mentions;
+    private List<Long> mentionedUserIds;
 }

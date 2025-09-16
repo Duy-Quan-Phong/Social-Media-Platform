@@ -5,6 +5,7 @@ import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
 import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.repository.comment.LikeCommentRepository;
+import com.codegym.socialmedia.repository.comment.MentionRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
@@ -34,6 +35,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     private final PostMessage postMessage;
     private final NotificationService notificationService;
     private final FriendshipService friendshipService;
+    private final MentionRepository mentionRepository;
 
     @Override
     public PostComment addComment(Long postId, User user, String content, List<Long> mentionIds) {
@@ -56,6 +58,12 @@ public class PostCommentServiceImpl implements PostCommentService {
             // ✅ Lưu mentions nếu có
             if (mentionIds != null && !mentionIds.isEmpty()) {
                 for (long mentionedUserId : mentionIds) {
+                    User u = userRepository.findById(mentionedUserId).orElseThrow(() -> new RuntimeException("User not found"));
+                    CommentMention cm = new CommentMention();
+                    cm.setComment(savedComment);
+                    cm.setMentionedUser(u);
+                    mentionRepository.save(cm);
+
                     notificationService.notify(
                             user.getId(),
                             mentionedUserId,
@@ -102,6 +110,10 @@ public class PostCommentServiceImpl implements PostCommentService {
         return postCommentRepository.save(comment);
     }
 
+    private List<User> getMentionedUsersByCommentId(Long commentId) {
+        return mentionRepository.getUsersByCommentId(commentId);
+    }
+
     @Override
     public Page<DisplayCommentDTO> getCommentsByPost(Long postId, User currentUser, int page, int size) {
         Post post = postRepository.findById(postId)
@@ -110,7 +122,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         Pageable pageable = PageRequest.of(page, size);
         Page<PostComment> comments = postCommentRepository.findRecentCommentsByPost(post, pageable);
 
-        return comments.map(comment -> mapToDTO(comment, currentUser,friendshipService));
+        return comments.map(comment -> mapToDTO(comment, currentUser, getMentionedUsersByCommentId(comment.getId()),friendshipService));
     }
 
     @Override
@@ -195,7 +207,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         notificationService.notify(currentUser.getId(), parent.getUser().getId(),
                 Notification.NotificationType.REPLY_COMMENT, Notification.ReferenceType.COMMENT, savedReply.getId());
         // chỉ trả về reply mới, KHÔNG load lại parent
-        return DisplayCommentDTO.mapToDTO(savedReply, currentUser,friendshipService);
+        return DisplayCommentDTO.mapToDTO(savedReply, currentUser, getMentionedUsersByCommentId(savedReply.getId()), friendshipService);
     }
 
 

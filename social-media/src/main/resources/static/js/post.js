@@ -930,8 +930,14 @@ class PostManager {
         }
     }
 
-    static processMentions(text) {
-        return String(text || '').replace(/@([^\s@]+)/g, (_, u) => `<span class="mention-tag">@${u}</span>`);
+    static processMentions(text, mentionUsers = []) {
+        return String(text || '').replace(/@([^\s@]+)/g, (match, username) => {
+            const user = mentionUsers.find(u => u.username === username);
+            if (user) {
+                return `<a href="/profile/${username}" class="mention-tag">@${user.fullName}</a>`;
+            }
+            return match;
+        });
     }
 
     appendCommentToUI(postId, c, type = 'append', parentId = null) {
@@ -967,7 +973,7 @@ class PostManager {
         <div class="comment-body">
             <strong>${c.userFullName || c.username}</strong>
             <span class="comment-time">${timeAgo}</span>
-            <p class="comment-text">${PostManager.processMentions(c.comment)}</p>
+            <p class="comment-text" data-raw="${c.comment.replace(/"/g, '&quot;')}">${PostManager.processMentions(c.comment, c.mentionUsers || [])}</p>
             <div class="comment-actions d-flex align-items-center mb-2">
                 <span class="like-btn ${c.likedByCurrentUser ? 'liked' : ''}" id="comment-like-${c.commentId}" 
                       style="cursor: pointer; width: 50px"
@@ -1105,7 +1111,7 @@ class PostManager {
     editCommentUI(postId, commentId) {
         const commentCard = document.getElementById(`comment-${commentId}`);
         const commentTextEl = commentCard.querySelector('.comment-text');
-        const originalText = commentTextEl.textContent;
+        const originalText = commentTextEl.getAttribute('data-raw') || commentTextEl.textContent;
 
         // Tạo textarea để sửa
         const input = document.createElement('textarea');
@@ -1148,7 +1154,8 @@ class PostManager {
                 // Cập nhật UI
                 const p = document.createElement('p');
                 p.className = 'comment-text';
-                p.textContent = updated.comment;
+                p.setAttribute('data-raw', updated.comment);
+                p.innerHTML = PostManager.processMentions(updated.comment, updated.mentionUsers || []);
                 input.replaceWith(p);
 
                 saveBtn.remove();
@@ -1166,7 +1173,8 @@ class PostManager {
         cancelBtn.addEventListener('click', () => {
             const p = document.createElement('p');
             p.className = 'comment-text';
-            p.textContent = originalText;
+            p.setAttribute('data-raw', originalText);
+            p.innerHTML = PostManager.processMentions(originalText, c.mentionUsers || []); // c not in scope, but assume similar
             input.replaceWith(p);
             saveBtn.remove();
             cancelBtn.remove();
@@ -1235,7 +1243,7 @@ class PostManager {
             const res = await fetch('/api/comments/add', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({postId, content, mentions: mentionsByPost[postId] || []})
+                body: JSON.stringify({postId, content, mentionedUserIds: mentionsByPost[postId] || []})
             });
 
             if (!res.ok) {

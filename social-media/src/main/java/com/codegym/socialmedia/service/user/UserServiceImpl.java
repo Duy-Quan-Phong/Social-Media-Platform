@@ -297,8 +297,8 @@ public class UserServiceImpl implements UserService {
     }
 
     // Thêm các method debug
-    public List<User> getAllUsers() {
-        return iUserRepository.findAll();
+    public List<User> getAllUsersByIds(List<Long> ids){
+        return iUserRepository.findAllById(ids);
     }
 
     public long countUsers() {

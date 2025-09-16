@@ -28,7 +28,7 @@ public interface UserService {
 
     User createOrUpdateOAuth2User(String email, String name, String provider, String avatar);
 
-    List<User> getAllUsers();
+    List<User> getAllUsersByIds(List<Long> ids);
 
     long countUsers();
 
