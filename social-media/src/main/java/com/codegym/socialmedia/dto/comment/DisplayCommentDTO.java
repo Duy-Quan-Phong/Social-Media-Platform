@@ -16,6 +16,8 @@ import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Data
@@ -57,38 +59,89 @@ public class DisplayCommentDTO {
         this.mentions = listUser.stream().map(u -> new MentionDTO(u.getId(), u.getUsername(), u.getFullName())).toList();
     }
 
-    /**
-     * Render nội dung comment với mention link.
-     */
     private static String renderContent(String content, List<User> mentions) {
-        if (content == null) return "";
+        if (content == null || content.isEmpty()) return "";
 
-        // 1) Escape toàn bộ nội dung comment
-        String escaped = HtmlUtils.htmlEscape(content);
+        StringBuilder out = new StringBuilder();
+        int idx = 0;
+        int len = content.length();
 
-        // 2) Với mỗi user được mention, thay token @"Full Name" (đã escape) thành <a class="mention" ...>
-        String rendered = escaped;
-        for (User u : mentions) {
-            String mentionName = u.getFirstName() + " " + u.getLastName();
+        // Chuẩn bị danh sách mentions, sắp theo độ dài giảm dần để ưu tiên match tên dài trước
+        List<User> sortedMentions = new ArrayList<>(mentions != null ? mentions : Collections.emptyList());
+        sortedMentions.sort(Comparator.comparingInt(
+                u -> -((u.getFirstName() == null ? 0 : u.getFirstName().length())
+                        + (u.getLastName() == null ? 0 : u.getLastName().length()) + 1) )
+        );
 
-            // escape mention token để khớp với escaped content
-            String escapedMentionToken = HtmlUtils.htmlEscape("@" + mentionName);
+        while (idx < len) {
+            int at = content.indexOf('@', idx);
+            if (at == -1) {
+                // không còn @ -> append phần còn lại (escape)
+                out.append(HtmlUtils.htmlEscape(content.substring(idx)));
+                break;
+            }
 
-            // build anchor với class "mention" và attribute data-username (tiện xử lý client)
-            String anchor = "<a data-raw=\"" + content + "\""
-                    + " class=\"mention\""
-                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(mentionName) + "\">"
-                    + HtmlUtils.htmlEscape("@" + mentionName)
-                    + "</a>";
+            // append phần text trước @ (escape)
+            if (at > idx) {
+                out.append(HtmlUtils.htmlEscape(content.substring(idx, at)));
+            }
 
-            // Thay tất cả occurrences (an toàn vì cả hai đã escape)
-            rendered = rendered.replace(escapedMentionToken, anchor);
+            // Kiểm tra biên trước @: phải là bắt đầu chuỗi hoặc ký tự trắng
+            boolean okBoundaryBefore = (at == 0) || Character.isWhitespace(content.charAt(at - 1));
+            if (!okBoundaryBefore) {
+                // không phải bắt đầu mention -> coi '@' như ký tự thường
+                out.append(HtmlUtils.htmlEscape("@"));
+                idx = at + 1;
+                continue;
+            }
+
+            boolean matched = false;
+            // thử match từng user trong danh sách (đã sắp theo length desc)
+            for (User u : sortedMentions) {
+                String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
+                String last = u.getLastName() == null ? "" : u.getLastName().trim();
+                if (first.isEmpty() && last.isEmpty()) continue;
+
+                String fullName = (first + (last.isEmpty() ? "" : " " + last)).trim();
+                if (fullName.isEmpty()) continue;
+
+                int nameLen = fullName.length();
+                int endPos = at + 1 + nameLen; // exclusive end index if name matches
+
+                if (endPos <= len) {
+                    String candidate = content.substring(at + 1, endPos);
+                    // So khớp không phân biệt hoa thường
+                    if (candidate.equalsIgnoreCase(fullName)) {
+                        // Kiểm tra biên sau tên: phải là kết thúc chuỗi hoặc ký tự không phải chữ/数字 (để tránh match trong từ dài)
+                        if (endPos == len || !Character.isLetterOrDigit(content.charAt(endPos))) {
+                            // matched -> chèn anchor (escape thuộc tính & inner text)
+                            String anchor = "<a class=\"mention\""
+                                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(fullName) + "\">"
+                                    + HtmlUtils.htmlEscape("@" + fullName)
+                                    + "</a>";
+                            out.append(anchor);
+                            idx = endPos;
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!matched) {
+                // không phải mention hợp lệ -> output '@' đã escape
+                out.append(HtmlUtils.htmlEscape("@"));
+                idx = at + 1;
+            }
         }
 
-        return rendered;
+        return out.toString();
     }
+
+
+
 
     /**
      * Convert một comment thành DTO với depth control (tối đa 3 cấp).
