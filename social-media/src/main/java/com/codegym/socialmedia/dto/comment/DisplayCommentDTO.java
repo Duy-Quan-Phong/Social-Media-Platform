@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -61,12 +62,28 @@ public class DisplayCommentDTO {
      */
     private static String renderContent(String content, List<User> mentions) {
         if (content == null) return "";
-        String rendered = content;
+
+        // 1) Escape toàn bộ nội dung comment
+        String escaped = HtmlUtils.htmlEscape(content);
+
+        // 2) Với mỗi user được mention, thay token @"Full Name" (đã escape) thành <a class="mention" ...>
+        String rendered = escaped;
         for (User u : mentions) {
-            String mentionName = u.getFullName();
-            rendered = rendered.replace("@" + mentionName,
-                    "<a href='/profile/" + u.getUsername() + "'>@" + mentionName + "</a>");
+            String mentionName = u.getFirstName() + " " + u.getLastName();
+
+            // escape mention token để khớp với escaped content
+            String escapedMentionToken = HtmlUtils.htmlEscape("@" + mentionName);
+
+            // build anchor với class "mention" và attribute data-username (tiện xử lý client)
+            String anchor = "<a class=\"mention\" href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername())
+                    + "\" data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(mentionName) + "\">"
+                    + HtmlUtils.htmlEscape("@" + mentionName) + "</a>";
+
+            // Thay tất cả occurrences (an toàn vì cả hai đã escape)
+            rendered = rendered.replace(escapedMentionToken, anchor);
         }
+
         return rendered;
     }
 

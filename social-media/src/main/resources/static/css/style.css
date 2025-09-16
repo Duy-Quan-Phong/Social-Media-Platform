@@ -51,3 +51,41 @@ body {
         --navbar-height: 48px;
     }
 }
+
+
+/* mention style */
+a.mention {
+    display: inline-block;
+    padding: 2px 8px;              /* khoảng cách trong khung */
+    border-radius: 12px;           /* bo góc */
+    background: #eef6ff;           /* nền nhạt */
+    color: #0b63d6;                /* màu chữ */
+    text-decoration: none;         /* bỏ gạch chân */
+    border: 1px solid #cfe3ff;     /* viền mảnh */
+    font-weight: 500;
+    font-size: 0.95em;
+    line-height: 1;
+    vertical-align: middle;
+    transition: background .15s ease, box-shadow .15s ease, transform .06s ease;
+    box-shadow: none;
+}
+
+/* hover */
+a.mention:hover {
+    background: #d7ebff;
+    box-shadow: 0 4px 10px rgba(11,99,214,0.10);
+    transform: translateY(-1px);
+}
+
+/* focus (keyboard accessible) */
+a.mention:focus {
+    outline: 3px solid rgba(11,99,214,0.15);
+    outline-offset: 2px;
+    background: #d7ebff;
+}
+
+/* subtle active state */
+a.mention:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
