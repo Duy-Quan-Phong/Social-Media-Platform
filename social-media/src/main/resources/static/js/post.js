@@ -973,7 +973,9 @@ class PostManager {
         <div class="comment-body">
             <strong>${c.userFullName || c.username}</strong>
             <span class="comment-time">${timeAgo}</span>
-            <p class="comment-text" data-raw="${c.comment.replace(/"/g, '&quot;')}">${PostManager.processMentions(c.comment, c.mentionUsers || [])}</p>
+            <p class="comment-text" >
+                ${PostManager.processMentions(c.comment, c.mentionUsers || [])}
+            </p>
             <div class="comment-actions d-flex align-items-center mb-2">
                 <span class="like-btn ${c.likedByCurrentUser ? 'liked' : ''}" id="comment-like-${c.commentId}" 
                       style="cursor: pointer; width: 50px"
@@ -1113,10 +1115,13 @@ class PostManager {
         const commentTextEl = commentCard.querySelector('.comment-text');
         const originalText = commentTextEl.getAttribute('data-raw') || commentTextEl.textContent;
 
+        // Lưu lại element gốc để có thể phục hồi
+        const originalElement = commentTextEl.cloneNode(true);
+
         // Tạo textarea để sửa
         const input = document.createElement('textarea');
         input.className = 'form-control mb-1';
-        input.value = originalText;
+        input.value = originalText.trim();
         commentTextEl.replaceWith(input);
 
         // Tạo nút Lưu & Hủy
@@ -1144,7 +1149,7 @@ class PostManager {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({content: newContent})
+                    body: JSON.stringify({ content: newContent })
                 });
 
                 if (!response.ok) throw new Error('Update failed');
@@ -1171,11 +1176,8 @@ class PostManager {
 
         // Hủy sửa
         cancelBtn.addEventListener('click', () => {
-            const p = document.createElement('p');
-            p.className = 'comment-text';
-            p.setAttribute('data-raw', originalText);
-            p.innerHTML = PostManager.processMentions(originalText, c.mentionUsers || []); // c not in scope, but assume similar
-            input.replaceWith(p);
+            // Trả lại phần tử gốc
+            input.replaceWith(originalElement);
             saveBtn.remove();
             cancelBtn.remove();
         });

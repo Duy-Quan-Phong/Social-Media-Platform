@@ -75,10 +75,13 @@ public class DisplayCommentDTO {
             String escapedMentionToken = HtmlUtils.htmlEscape("@" + mentionName);
 
             // build anchor với class "mention" và attribute data-username (tiện xử lý client)
-            String anchor = "<a class=\"mention\" href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername())
-                    + "\" data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+            String anchor = "<a data-raw=\"" + content + "\""
+                    + " class=\"mention\""
+                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
                     + " aria-label=\"mention " + HtmlUtils.htmlEscape(mentionName) + "\">"
-                    + HtmlUtils.htmlEscape("@" + mentionName) + "</a>";
+                    + HtmlUtils.htmlEscape("@" + mentionName)
+                    + "</a>";
 
             // Thay tất cả occurrences (an toàn vì cả hai đã escape)
             rendered = rendered.replace(escapedMentionToken, anchor);
