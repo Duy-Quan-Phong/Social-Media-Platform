@@ -12,16 +12,29 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.*;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Entity
 @Table(name = "post_comments")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true) // chỉ in field được đánh dấu @ToString.Include
 public class PostComment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @ManyToOne
@@ -34,6 +47,7 @@ public class PostComment {
 
     @Lob
     @Column(nullable = false)
+    @ToString.Include
     private String content;
 
     @Column(nullable = false)
@@ -45,22 +59,37 @@ public class PostComment {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    // LikeComment
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<LikeComment> likedByUsers = new ArrayList<>();
 
-    @ManyToOne
+    // Parent comment
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
+    @JsonBackReference
+    @ToString.Exclude
     private PostComment parent;
 
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    // Replies
+    // PostComment.java (chỉ phần replies)
+    @OneToMany(mappedBy = "parent",
+            cascade = { CascadeType.PERSIST, CascadeType.MERGE }, // không có REMOVE
+            orphanRemoval = false,
+            fetch = FetchType.LAZY)
+    @JsonManagedReference
+    @ToString.Exclude
     private List<PostComment> replies = new ArrayList<>();
 
+
+    // Mentions
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private Set<CommentMention> mentions = new HashSet<>();
 
+    // Override toString gọn nhẹ, tránh in vòng lặp
     @Override
     public String toString() {
         return "[id: " + id + ", content: " + content + "]";
     }
 }
-

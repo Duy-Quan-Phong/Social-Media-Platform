@@ -68,10 +68,10 @@ public class CommentController {
         PostComment deletedComment = postCommentService.deleteComment(id, currentUser);
         if (deletedComment != null) {
             // Trả về DTO
-//            DisplayCommentDTO dto = new DisplayCommentDTO(deletedComment, false);
+            DisplayCommentDTO dto = new DisplayCommentDTO(deletedComment, false, List.of());
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "deletedComment", deletedComment
+                    "deletedComment", dto
             ));
         } else {
             return ResponseEntity.status(403).body(Map.of(

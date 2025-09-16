@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -126,6 +127,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     }
 
     @Override
+    @Transactional
     public PostComment deleteComment(Long commentId, User currentUser) {
         PostComment comment = postCommentRepository.findById(commentId).orElse(null);
         if (comment == null || !comment.getUser().getId().equals(currentUser.getId())) {
@@ -134,14 +136,39 @@ public class PostCommentServiceImpl implements PostCommentService {
 
         try {
             Post post = comment.getPost();
-            postCommentRepository.delete(comment);
+
+            // 1) Detach replies: set parent = null, cập nhật cả 2 phía để tránh inconsistency in-memory
+            List<PostComment> replies = new ArrayList<>(comment.getReplies()); // init
+            for (PostComment reply : replies) {
+                // remove relation both sides
+                reply.setParent(null);
+                comment.getReplies().remove(reply);
+                // persist child update (important)
+                postCommentRepository.save(reply);
+            }
+
+            // 2) Flush changes để DB không còn FK trỏ tới comment trước khi xóa comment
+            postCommentRepository.flush();
+
+            // 3) Xóa rõ ràng các row liên quan (mentions, likes) bằng JPQL -> tránh FK errors
+            mentionRepository.deleteByCommentId(commentId);
+            likeCommentRepository.deleteByCommentId(commentId);
+
+            // 4) Flush tiếp để đảm bảo các delete trên được materialize
+            // (postCommentRepository.flush() hoặc entityManager.flush())
+            postCommentRepository.flush();
+
+            // 5) Cuối cùng xóa comment
+            postCommentRepository.deleteById(commentId);
+            postCommentRepository.flush();
+
+            // 6) notify và trả về
             postMessage.notifyCommentStatusChanged(post.getId(), postCommentRepository.countByPost(post));
             return comment;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
-
     }
 
     @Override

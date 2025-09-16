@@ -17,11 +17,11 @@ public class CommentMention {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "comment_id", nullable = false)
     private PostComment comment;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mentioned_user_id", nullable = false)
     private User mentionedUser;
 
@@ -29,8 +29,7 @@ public class CommentMention {
     public String toString() {
         return "CommentMention{" +
                 "id=" + id +
-                ", comment=" + comment +
-                ", mentionedUser=" + mentionedUser +
                 '}';
     }
+
 }

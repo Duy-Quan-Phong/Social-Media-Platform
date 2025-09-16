@@ -1197,25 +1197,31 @@ class PostManager {
 
             const response = await fetch(`/api/comments/${commentId}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
-            const data = await response.json();
+            let data = {};
+            if (response.ok) {
+                const text = await response.text();
+                data = text ? JSON.parse(text) : {};
+            } else {
+                this.showNotification('Xóa bình luận thất bại (lỗi server)', 'error');
+                return;
+            }
+
             if (data.success) {
                 // Xóa comment khỏi UI
                 const commentEl = document.getElementById(`comment-${commentId}`);
                 if (commentEl) commentEl.remove();
-                if (!data.deletedComment.parentCommentId) {
-                    // Nếu là comment cha, xóa luôn replies-group
+
+                if (!data.deletedComment?.parentCommentId) {
                     const repliesGroup = document.getElementById(`replies-group-${commentId}`);
                     if (repliesGroup) repliesGroup.remove();
+
                     const st = this.commentState[postId];
                     if (st) {
-                        // Giảm tổng số comment hiện tại
-                        st.page = Math.max(0, st.page - 1);
-                        st.hasMore = true; // cho phép load thêm để bù dữ liệu
+                        st.total = Math.max(0, (st.total || 1) - 1);
+                        st.hasMore = true;
                     }
                 }
 
