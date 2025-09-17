@@ -54,24 +54,8 @@ public class PostCommentServiceImpl implements PostCommentService {
             // ✅ Lưu comment trước
             PostComment savedComment = postCommentRepository.save(comment);
 
-            // ✅ Lưu mentions nếu có
-            if (mentionIds != null && !mentionIds.isEmpty()) {
-                for (long mentionedUserId : mentionIds) {
-                    User u = userRepository.findById(mentionedUserId).orElseThrow(() -> new RuntimeException("User not found"));
-                    CommentMention cm = new CommentMention();
-                    cm.setComment(savedComment);
-                    cm.setMentionedUser(u);
-                    mentionRepository.save(cm);
-                    savedComment.getMentions().add(cm);
-                    notificationService.notify(
-                            user.getId(),
-                            mentionedUserId,
-                            Notification.NotificationType.MENTION_COMMENT,
-                            Notification.ReferenceType.COMMENT,
-                            savedComment.getId()
-                    );
-                }
-            }
+            // ✅ Lưu mentions (dùng hàm riêng)
+            handleMentions(savedComment, user, mentionIds);
 
             // ✅ Cập nhật số lượng comment cho post
             postMessage.notifyCommentStatusChanged(
@@ -94,6 +78,69 @@ public class PostCommentServiceImpl implements PostCommentService {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    @Override
+    public DisplayCommentDTO replyToComment(Long parentCommentId, User currentUser, String content, List<Long> mentionIds) {
+        PostComment parent = postCommentRepository.findById(parentCommentId)
+                .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+
+        PostComment reply = new PostComment();
+        reply.setContent(content);
+        reply.setUser(currentUser);
+        reply.setPost(parent.getPost());
+        reply.setParent(parent);
+        reply.setCreatedAt(LocalDateTime.now());
+
+        try {
+            // ✅ Lưu reply trước
+            PostComment savedReply = postCommentRepository.save(reply);
+
+            // ✅ Lưu mentions (dùng chung)
+            handleMentions(savedReply, currentUser, mentionIds);
+
+            // ✅ Notify cho chủ comment cha
+            if (!currentUser.getId().equals(parent.getUser().getId())) {
+                notificationService.notify(
+                        currentUser.getId(),
+                        parent.getUser().getId(),
+                        Notification.NotificationType.REPLY_COMMENT,
+                        Notification.ReferenceType.COMMENT,
+                        savedReply.getId()
+                );
+            }
+
+            // ✅ Trả về reply mới (không load lại parent)
+            return DisplayCommentDTO.mapToDTO(savedReply, currentUser, friendshipService);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // ================== HÀM DÙNG CHUNG ==================
+    private void handleMentions(PostComment comment, User author, List<Long> mentionIds) {
+        if (mentionIds != null && !mentionIds.isEmpty()) {
+            for (long mentionedUserId : mentionIds) {
+                User u = userRepository.findById(mentionedUserId)
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+                CommentMention cm = new CommentMention();
+                cm.setComment(comment);
+                cm.setMentionedUser(u);
+                mentionRepository.save(cm);
+                comment.getMentions().add(cm);
+
+                // Gửi thông báo mention
+                notificationService.notify(
+                        author.getId(),
+                        mentionedUserId,
+                        Notification.NotificationType.MENTION_COMMENT,
+                        Notification.ReferenceType.COMMENT,
+                        comment.getId()
+                );
+            }
         }
     }
 
@@ -214,25 +261,5 @@ public class PostCommentServiceImpl implements PostCommentService {
 
         return likedByCurrentUser;
     }
-
-    @Override
-    public DisplayCommentDTO replyToComment(Long parentCommentId, User currentUser, String content) {
-        PostComment parent = postCommentRepository.findById(parentCommentId)
-                .orElseThrow(() -> new RuntimeException("Parent comment not found"));
-
-        PostComment reply = new PostComment();
-        reply.setContent(content);
-        reply.setUser(currentUser);
-        reply.setPost(parent.getPost());
-        reply.setParent(parent);
-        reply.setCreatedAt(LocalDateTime.now());
-
-        PostComment savedReply = postCommentRepository.save(reply);
-        notificationService.notify(currentUser.getId(), parent.getUser().getId(),
-                Notification.NotificationType.REPLY_COMMENT, Notification.ReferenceType.COMMENT, savedReply.getId());
-        // chỉ trả về reply mới, KHÔNG load lại parent
-        return DisplayCommentDTO.mapToDTO(savedReply, currentUser, friendshipService);
-    }
-
 
 }

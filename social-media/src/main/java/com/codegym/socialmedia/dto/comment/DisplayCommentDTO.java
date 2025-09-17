@@ -42,7 +42,7 @@ public class DisplayCommentDTO {
     private Long parentCommentId;
 
     /**
-     * Convert một comment thành DTO với depth control (tối đa 3 cấp).
+     * Convert một comment thành DTO với depth control (1 gốc và tối đa 3 cấp hậu duệ).
      */
     public static DisplayCommentDTO mapToDTO(PostComment comment,
                                              User currentUser,

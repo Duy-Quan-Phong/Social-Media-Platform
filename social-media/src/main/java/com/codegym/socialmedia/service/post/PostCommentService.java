@@ -21,5 +21,5 @@ public interface PostCommentService {
     // Thêm method lấy comment theo commentId
     Optional<PostComment> getCommentById(Long commentId);
     boolean toggleLikeComment(Long commentId, User currentUser);
-    DisplayCommentDTO replyToComment(Long commentId, User currentUser, String content);
+    DisplayCommentDTO replyToComment(Long commentId, User currentUser, String content, List<Long> mentionIds);
 }

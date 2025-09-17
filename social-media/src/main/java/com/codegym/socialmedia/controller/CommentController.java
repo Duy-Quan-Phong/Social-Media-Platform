@@ -115,11 +115,11 @@ public class CommentController {
         String content = req.getContent();
         User currentUser = userService.getCurrentUser();
 
-        DisplayCommentDTO dto = postCommentService.replyToComment(commentId, currentUser, content);
+        DisplayCommentDTO dto = postCommentService.replyToComment(commentId, currentUser, content,req.getMentionedUserIds());
         dto.setCanEdit(true);
         dto.setCanDeleted(true);
 
-        return ResponseEntity.ok(Map.of("reply", dto)); // <-- wrap lại trong reply
+        return ResponseEntity.ok(Map.of("reply", dto));
     }
 
 
