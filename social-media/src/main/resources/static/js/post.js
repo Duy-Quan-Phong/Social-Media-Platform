@@ -1028,10 +1028,12 @@ class PostManager {
             // đảm bảo .line-reply tồn tại trước khi set
             const $line = $cardElem.find('.line-reply');
             if ($line.length) {
-                $line.css('top', cardMidRel + 'px');
+                $line.css({
+                    top: cardMidRel + 'px',
+                    transition: 'top 0.3s ease'
+                });
             }
         }
-
 
 
         // Cập nhật vertical-line của parent: nối từ midpoint của parent -> midpoint của **last direct child reply**
@@ -1075,8 +1077,8 @@ class PostManager {
             const parentHalfHeight = parentHeight / 2;
 
             $repliesGroup.find('.vertical-line').css({
-                top: topRelative-10 + 'px',
-                height: heightRelative-parentHalfHeight+7 + 'px'
+                top: (topRelative - 10) + 'px',
+                height: (heightRelative - parentHalfHeight + 7) + 'px'
             });
 
             // cập nhật luôn line ngang của parent
