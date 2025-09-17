@@ -22,6 +22,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "post_comments")
@@ -91,5 +92,12 @@ public class PostComment {
     @Override
     public String toString() {
         return "[id: " + id + ", content: " + content + "]";
+    }
+
+    @Transient
+    public List<User> getMentionedUsers() {
+        return mentions.stream()
+                .map(CommentMention::getMentionedUser)
+                .collect(Collectors.toList());
     }
 }

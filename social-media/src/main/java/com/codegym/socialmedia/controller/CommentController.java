@@ -40,7 +40,7 @@ public class CommentController {
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
         PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
 
-        DisplayCommentDTO newComment = new DisplayCommentDTO(saved, false,userService.getAllUsersByIds(req.getMentionedUserIds()));
+        DisplayCommentDTO newComment = DisplayCommentDTO.mapToDTO(saved, userService.getCurrentUser(),friendshipService);
         newComment.setCanEdit(true);
         newComment.setCanDeleted(true);
         newComment.setCanReply(true);
@@ -58,7 +58,7 @@ public class CommentController {
     public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent());
-        return DisplayCommentDTO.mapToDTO(updated, currentUser,userService.getAllUsersByIds(req.getMentionedUserIds()), friendshipService); // trả về DTO với quyền
+        return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
     }
 
     @DeleteMapping("/{id}")
@@ -68,7 +68,7 @@ public class CommentController {
         PostComment deletedComment = postCommentService.deleteComment(id, currentUser);
         if (deletedComment != null) {
             // Trả về DTO
-            DisplayCommentDTO dto = new DisplayCommentDTO(deletedComment, false, List.of());
+            DisplayCommentDTO dto =  DisplayCommentDTO.mapToDTO(deletedComment,currentUser,friendshipService);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "deletedComment", dto
@@ -111,8 +111,8 @@ public class CommentController {
     @PostMapping("/{commentId}/reply")
     public ResponseEntity<?> replyToComment(
             @PathVariable Long commentId,
-            @RequestBody Map<String, String> payload) {
-        String content = payload.get("content");
+            @RequestBody CommentRequest req) {
+        String content = req.getContent();
         User currentUser = userService.getCurrentUser();
 
         DisplayCommentDTO dto = postCommentService.replyToComment(commentId, currentUser, content);

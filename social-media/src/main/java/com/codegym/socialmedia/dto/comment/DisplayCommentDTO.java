@@ -2,7 +2,6 @@ package com.codegym.socialmedia.dto.comment;
 
 import com.codegym.socialmedia.component.PrivacyUtils;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.social_action.CommentMention;
 import com.codegym.socialmedia.model.social_action.Friendship;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostComment;
@@ -11,14 +10,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -46,143 +41,52 @@ public class DisplayCommentDTO {
     private List<MentionDTO> mentions;
     private Long parentCommentId;
 
-    public DisplayCommentDTO(PostComment comment, boolean isLikedByCurrentUser,List<User> listUser) {
-        this.username = comment.getUser().getUsername();
-        this.userAvatarUrl = comment.getUser().getProfilePicture();
-        this.userFullName = comment.getUser().getFirstName() + " " + comment.getUser().getLastName();
-        this.createdAt = comment.getCreatedAt();
-        this.updatedAt = comment.getUpdatedAt();
-        this.comment = renderContent(comment.getContent(), listUser);
-        this.commentId = comment.getId();
-        this.isLikedByCurrentUser = isLikedByCurrentUser;
-        this.parentCommentId = comment.getParent() != null ? comment.getParent().getId() : null;
-        this.mentions = listUser.stream().map(u -> new MentionDTO(u.getId(), u.getUsername(), u.getFullName())).toList();
-    }
-
-    private static String renderContent(String content, List<User> mentions) {
-        if (content == null || content.isEmpty()) return "";
-
-        StringBuilder out = new StringBuilder();
-        int idx = 0;
-        int len = content.length();
-
-        // Chuẩn bị danh sách mentions, sắp theo độ dài giảm dần để ưu tiên match tên dài trước
-        List<User> sortedMentions = new ArrayList<>(mentions != null ? mentions : Collections.emptyList());
-        sortedMentions.sort(Comparator.comparingInt(
-                u -> -((u.getFirstName() == null ? 0 : u.getFirstName().length())
-                        + (u.getLastName() == null ? 0 : u.getLastName().length()) + 1) )
-        );
-
-        while (idx < len) {
-            int at = content.indexOf('@', idx);
-            if (at == -1) {
-                // không còn @ -> append phần còn lại (escape)
-                out.append(HtmlUtils.htmlEscape(content.substring(idx)));
-                break;
-            }
-
-            // append phần text trước @ (escape)
-            if (at > idx) {
-                out.append(HtmlUtils.htmlEscape(content.substring(idx, at)));
-            }
-
-            // Kiểm tra biên trước @: phải là bắt đầu chuỗi hoặc ký tự trắng
-            boolean okBoundaryBefore = (at == 0) || Character.isWhitespace(content.charAt(at - 1));
-            if (!okBoundaryBefore) {
-                // không phải bắt đầu mention -> coi '@' như ký tự thường
-                out.append(HtmlUtils.htmlEscape("@"));
-                idx = at + 1;
-                continue;
-            }
-
-            boolean matched = false;
-            // thử match từng user trong danh sách (đã sắp theo length desc)
-            for (User u : sortedMentions) {
-                String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
-                String last = u.getLastName() == null ? "" : u.getLastName().trim();
-                if (first.isEmpty() && last.isEmpty()) continue;
-
-                String fullName = (first + (last.isEmpty() ? "" : " " + last)).trim();
-                if (fullName.isEmpty()) continue;
-
-                int nameLen = fullName.length();
-                int endPos = at + 1 + nameLen; // exclusive end index if name matches
-
-                if (endPos <= len) {
-                    String candidate = content.substring(at + 1, endPos);
-                    // So khớp không phân biệt hoa thường
-                    if (candidate.equalsIgnoreCase(fullName)) {
-                        // Kiểm tra biên sau tên: phải là kết thúc chuỗi hoặc ký tự không phải chữ/数字 (để tránh match trong từ dài)
-                        if (endPos == len || !Character.isLetterOrDigit(content.charAt(endPos))) {
-                            // matched -> chèn anchor (escape thuộc tính & inner text)
-                            String anchor = "<a class=\"mention\""
-                                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(fullName) + "\">"
-                                    + HtmlUtils.htmlEscape("@" + fullName)
-                                    + "</a>";
-                            out.append(anchor);
-                            idx = endPos;
-                            matched = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!matched) {
-                // không phải mention hợp lệ -> output '@' đã escape
-                out.append(HtmlUtils.htmlEscape("@"));
-                idx = at + 1;
-            }
-        }
-
-        return out.toString();
-    }
-
-
-
-
     /**
      * Convert một comment thành DTO với depth control (tối đa 3 cấp).
      */
     public static DisplayCommentDTO mapToDTO(PostComment comment,
-                                             User currentUser, List<User> mentionedUsers,
+                                             User currentUser,
                                              FriendshipService friendshipService) {
-        return getComment(comment, currentUser, mentionedUsers,friendshipService, 3);
+        return getComment(comment, currentUser, friendshipService, 3);
     }
 
     private static DisplayCommentDTO getComment(PostComment comment,
-                                                User currentUser, List<User> mentionedUsers,
+                                                User currentUser,
                                                 FriendshipService friendshipService,
                                                 int depth) {
         // Build base DTO
-        DisplayCommentDTO dto = buildDtoBase(comment, currentUser,  mentionedUsers, friendshipService);
+        DisplayCommentDTO dto = buildDtoBase(comment, currentUser, friendshipService);
 
-        // Handle replies theo depth
+        // Render content sau khi build base
+        dto.setComment(renderContent(comment.getContent(), comment.getMentionedUsers()));
+
+        // Xử lý replies
         if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
             if (depth > 1) {
                 List<DisplayCommentDTO> replies = new ArrayList<>();
                 for (PostComment reply : sortComments(comment.getReplies())) {
-                    replies.add(getComment(reply, currentUser,mentionedUsers, friendshipService, depth - 1));
+                    DisplayCommentDTO replyDTO =
+                            getComment(reply, currentUser, friendshipService, depth - 1);
+                    replies.add(replyDTO);
                 }
                 dto.setReplies(replies);
             } else {
                 List<DisplayCommentDTO> flatDescendants = new ArrayList<>();
-                collectDescendantsFlat(comment, flatDescendants, currentUser, mentionedUsers,friendshipService);
+                collectDescendantsFlat(comment, flatDescendants, currentUser, friendshipService);
                 dto.setReplies(flatDescendants.isEmpty() ? null : flatDescendants);
             }
         } else {
             dto.setReplies(null);
         }
+
         return dto;
     }
 
     /**
-     * Build dữ liệu cơ bản cho DTO (không set replies).
+     * Build dữ liệu cơ bản cho DTO (không set replies, không render content).
      */
     private static DisplayCommentDTO buildDtoBase(PostComment comment,
-                                                  User currentUser, List<User> mentionedUsers,
+                                                  User currentUser,
                                                   FriendshipService friendshipService) {
         DisplayCommentDTO dto = new DisplayCommentDTO();
         Post p = comment.getPost();
@@ -204,7 +108,6 @@ public class DisplayCommentDTO {
 
         // Base info
         dto.setCommentId(comment.getId());
-        dto.setComment(renderContent(comment.getContent(), mentionedUsers));
         dto.setCreatedAt(comment.getCreatedAt());
         dto.setUpdatedAt(comment.getUpdatedAt());
         dto.setUserFullName(comment.getUser().getFullName());
@@ -225,25 +128,26 @@ public class DisplayCommentDTO {
         dto.setLikedByCurrentUser(likedByCurrentUser);
 
         // Mentions
-        dto.setMentions(mentionedUsers.stream()
+        List<User> mentions = comment.getMentionedUsers();
+        dto.setMentions(mentions.stream()
                 .map(u -> new MentionDTO(u.getId(), u.getUsername(), u.getFullName()))
                 .toList());
 
         return dto;
     }
 
-
     private static void collectDescendantsFlat(PostComment root,
                                                List<DisplayCommentDTO> collector,
-                                               User currentUser, List<User> mentionedUsers,
+                                               User currentUser,
                                                FriendshipService friendshipService) {
         if (root.getReplies() == null || root.getReplies().isEmpty()) return;
 
         for (PostComment child : sortComments(root.getReplies())) {
-            DisplayCommentDTO leaf = buildDtoBase(child, currentUser,mentionedUsers, friendshipService);
+            DisplayCommentDTO leaf = buildDtoBase(child, currentUser, friendshipService);
+            leaf.setComment(renderContent(child.getContent(), child.getMentionedUsers()));
             leaf.setReplies(null);
             collector.add(leaf);
-            collectDescendantsFlat(child, collector, currentUser, mentionedUsers,friendshipService);
+            collectDescendantsFlat(child, collector, currentUser, friendshipService);
         }
     }
 
@@ -251,5 +155,79 @@ public class DisplayCommentDTO {
         return comments.stream()
                 .sorted(Comparator.comparing(PostComment::getCreatedAt).reversed())
                 .toList();
+    }
+
+    /**
+     * Render nội dung comment với mentions.
+     */
+    private static String renderContent(String content, List<User> mentions) {
+        if (content == null || content.isEmpty()) return "";
+
+        StringBuilder out = new StringBuilder();
+        int idx = 0;
+        int len = content.length();
+
+        // Sắp xếp mentions theo tên dài trước
+        List<User> sortedMentions = new ArrayList<>(mentions != null ? mentions : Collections.emptyList());
+        sortedMentions.sort(Comparator.comparingInt(
+                u -> -((u.getFirstName() == null ? 0 : u.getFirstName().length())
+                        + (u.getLastName() == null ? 0 : u.getLastName().length()) + 1))
+        );
+
+        while (idx < len) {
+            int at = content.indexOf('@', idx);
+            if (at == -1) {
+                out.append(HtmlUtils.htmlEscape(content.substring(idx)));
+                break;
+            }
+            if (at > idx) {
+                out.append(HtmlUtils.htmlEscape(content.substring(idx, at)));
+            }
+
+            boolean okBoundaryBefore = (at == 0) || Character.isWhitespace(content.charAt(at - 1));
+            if (!okBoundaryBefore) {
+                out.append(HtmlUtils.htmlEscape("@"));
+                idx = at + 1;
+                continue;
+            }
+
+            boolean matched = false;
+            for (User u : sortedMentions) {
+                String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
+                String last = u.getLastName() == null ? "" : u.getLastName().trim();
+                if (first.isEmpty() && last.isEmpty()) continue;
+
+                String fullName = (first + (last.isEmpty() ? "" : " " + last)).trim();
+                if (fullName.isEmpty()) continue;
+
+                int nameLen = fullName.length();
+                int endPos = at + 1 + nameLen;
+
+                if (endPos <= len) {
+                    String candidate = content.substring(at + 1, endPos);
+                    if (candidate.equalsIgnoreCase(fullName)) {
+                        if (endPos == len || !Character.isLetterOrDigit(content.charAt(endPos))) {
+                            String anchor = "<a class=\"mention\""
+                                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
+                                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(fullName) + "\">"
+                                    + HtmlUtils.htmlEscape("@" + fullName)
+                                    + "</a>";
+                            out.append(anchor);
+                            idx = endPos;
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!matched) {
+                out.append(HtmlUtils.htmlEscape("@"));
+                idx = at + 1;
+            }
+        }
+
+        return out.toString();
     }
 }

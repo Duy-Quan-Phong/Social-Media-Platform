@@ -2,13 +2,12 @@ package com.codegym.socialmedia.model.social_action;
 
 import com.codegym.socialmedia.model.account.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "comment_mentions")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class CommentMention {

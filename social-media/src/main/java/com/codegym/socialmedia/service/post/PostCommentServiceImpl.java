@@ -19,9 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
 
@@ -64,7 +62,7 @@ public class PostCommentServiceImpl implements PostCommentService {
                     cm.setComment(savedComment);
                     cm.setMentionedUser(u);
                     mentionRepository.save(cm);
-
+                    savedComment.getMentions().add(cm);
                     notificationService.notify(
                             user.getId(),
                             mentionedUserId,
@@ -91,7 +89,6 @@ public class PostCommentServiceImpl implements PostCommentService {
                         savedComment.getId()
                 );
             }
-
             return savedComment;
 
         } catch (Exception e) {
@@ -123,7 +120,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         Pageable pageable = PageRequest.of(page, size);
         Page<PostComment> comments = postCommentRepository.findRecentCommentsByPost(post, pageable);
 
-        return comments.map(comment -> mapToDTO(comment, currentUser, getMentionedUsersByCommentId(comment.getId()),friendshipService));
+        return comments.map(comment -> mapToDTO(comment, currentUser,friendshipService));
     }
 
     @Override
@@ -234,7 +231,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         notificationService.notify(currentUser.getId(), parent.getUser().getId(),
                 Notification.NotificationType.REPLY_COMMENT, Notification.ReferenceType.COMMENT, savedReply.getId());
         // chỉ trả về reply mới, KHÔNG load lại parent
-        return DisplayCommentDTO.mapToDTO(savedReply, currentUser, getMentionedUsersByCommentId(savedReply.getId()), friendshipService);
+        return DisplayCommentDTO.mapToDTO(savedReply, currentUser, friendshipService);
     }
 
 

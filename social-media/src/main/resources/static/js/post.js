@@ -360,9 +360,10 @@ class PostManager {
                         <div class="comment-input-container" style="position: relative">
                             <textarea class="comment-input" placeholder="Viết bình luận..." 
                                      onkeypress="postManager.handleCommentKeyPress(event, ${post.id})"
-                                     onkeydown="postManager.handleMentionKeyDown(event, ${post.id})"
-                                     oninput="postManager.showMentionSuggestions(${post.id}, this)"></textarea>
-                            <ul id="mentions-dropdown-${post.id}" class="mentions-dropdown"></ul>
+                                     onkeydown="postManager.handleMentionKeyDown(event, ${post.id}, 'main-${post.id}')"
+
+                                     oninput="postManager.showMentionSuggestions(${post.id}, this, 'main-${post.id}')"></textarea>
+                            <ul id="mentions-dropdown-main-${post.id}" class="mentions-dropdown"></ul>
                              <button class="comment-submit" onclick="postManager.submitComment(${post.id})">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
@@ -923,21 +924,31 @@ class PostManager {
         fill();
     }
 
-    handleCommentKeyPress(event, postId) {
+    handleCommentKeyPress(event, postId, key = `main-${postId}`) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            this.submitComment(postId);
+            if (key.startsWith('main-')) {
+                this.submitComment(postId);
+            } else if (key.startsWith('reply-')) {
+                const parentCommentId = parseInt(key.split('-')[1]);
+                const btn = event.target.parentElement.querySelector('button');
+                this.submitReply(postId, parentCommentId, btn);
+            } else if (key.startsWith('edit-')) {
+                const commentId = parseInt(key.split('-')[1]);
+                const saveBtn = event.target.parentElement.querySelector('.btn-primary');
+                saveBtn.click();
+            }
         }
     }
 
     static processMentions(text, mentionUsers = []) {
-        return String(text || '').replace(/@([^\s@]+)/g, (match, username) => {
-            const user = mentionUsers.find(u => u.username === username);
-            if (user) {
-                return `<a href="/profile/${username}" class="mention-tag">@${user.fullName}</a>`;
-            }
-            return match;
+        let processed = text;
+        mentionUsers.forEach(user => {
+            const escapedFullName = user.fullName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`@${escapedFullName}(?![\\w])`, 'g'); // Stop if next is word char
+            processed = processed.replace(regex, `<a href="/profile/${user.username}" class="mention-tag">@${user.fullName}</a>`);
         });
+        return processed;
     }
 
     appendCommentToUI(postId, c, type = 'append', parentId = null) {
@@ -1122,7 +1133,18 @@ class PostManager {
         const input = document.createElement('textarea');
         input.className = 'form-control mb-1';
         input.value = originalText.trim();
+        input.setAttribute('onkeypress', `postManager.handleCommentKeyPress(event, ${postId}, 'edit-${commentId}')`);
+        input.setAttribute('onkeydown', `postManager.handleMentionKeyDown(event, ${postId}, 'edit-${commentId}')`);
+        input.setAttribute('oninput', `postManager.showMentionSuggestions(${postId}, this, 'edit-${commentId}')`);
         commentTextEl.replaceWith(input);
+
+        // Tạo dropdown cho mention
+        const dropdown = document.createElement('ul');
+        dropdown.id = `mentions-dropdown-edit-${commentId}`;
+        dropdown.className = 'mentions-dropdown';
+        const commentBody = commentCard.querySelector('.comment-body');
+        commentBody.style.position = 'relative';
+        commentBody.appendChild(dropdown);
 
         // Tạo nút Lưu & Hủy
         const actionsDiv = commentCard.querySelector('.comment-actions');
@@ -1143,13 +1165,14 @@ class PostManager {
             if (!newContent) return;
 
             try {
+                const mentionedUserIds = mentionsMap.get(`edit-${commentId}`) || [];
                 const response = await fetch(`/api/comments/${commentId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ content: newContent })
+                    body: JSON.stringify({ content: newContent, mentionedUserIds })
                 });
 
                 if (!response.ok) throw new Error('Update failed');
@@ -1166,6 +1189,11 @@ class PostManager {
                 saveBtn.remove();
                 cancelBtn.remove();
 
+                // Clear mentions and remove dropdown
+                mentionsMap.delete(`edit-${commentId}`);
+                dropdown.remove();
+                commentBody.style.position = '';
+
                 postManager.showNotification('Cập nhật comment thành công!', 'success');
 
             } catch (error) {
@@ -1180,6 +1208,9 @@ class PostManager {
             input.replaceWith(originalElement);
             saveBtn.remove();
             cancelBtn.remove();
+            mentionsMap.delete(`edit-${commentId}`);
+            dropdown.remove();
+            commentBody.style.position = '';
         });
     }
 
@@ -1237,7 +1268,7 @@ class PostManager {
         }
     }
 
-    async submitComment(postId) {
+    async submitComment(postId, key = `main-${postId}`) {
         const commentInput = document.querySelector(`#comments-${postId} .comment-input`);
         const content = (commentInput.value || '').trim();
         if (!content) return;
@@ -1248,10 +1279,11 @@ class PostManager {
         if (submitBtn) submitBtn.disabled = true;
 
         try {
+            const mentionedUserIds = mentionsMap.get(key) || [];
             const res = await fetch('/api/comments/add', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({postId, content, mentionedUserIds: mentionsByPost[postId] || []})
+                body: JSON.stringify({postId, content, mentionedUserIds})
             });
 
             if (!res.ok) {
@@ -1262,7 +1294,7 @@ class PostManager {
             const newComment = await res.json();
             this.appendCommentToUI(postId, newComment, 'pre');
             commentInput.value = '';
-            mentionsByPost[postId] = []; // Clear mentions after send
+            mentionsMap.delete(key); // Clear mentions after send
             this.showNotification('Bình luận đã được thêm!', 'success');
         } catch (e) {
             console.error(e);
@@ -1276,7 +1308,7 @@ class PostManager {
     showReplyBox(postId, parentCommentId) {
         let $replyContainer = $(`#replies-group-${parentCommentId}`);
         if ($replyContainer.length === 0) {
-            $replyContainer = $(`<div class="replies-group" id="replies-group-${parentCommentId}"></div>`);
+            $replyContainer = $(`<div class="replies-group" id="replies-group-${parentCommentId}" style="position: relative"><div class="vertical-line"></div></div>`);
             $(`#comment-${parentCommentId}`).after($replyContainer);
         }
 
@@ -1289,8 +1321,12 @@ class PostManager {
 
         // Nếu chưa có thì thêm box
         const $replyBox = $(`
-        <div class="reply-box mt-2 mb-2">
-            <textarea class="form-control reply-input" placeholder="Viết phản hồi..."></textarea>
+        <div class="reply-box mt-2 mb-2" style="position: relative">
+            <textarea class="form-control reply-input" placeholder="Viết phản hồi..."
+                      onkeypress="postManager.handleCommentKeyPress(event, ${postId}, 'reply-${parentCommentId}')"
+                      onkeydown="postManager.handleMentionKeyDown(event, ${postId}, 'reply-${parentCommentId}')"
+                      oninput="postManager.showMentionSuggestions(${postId}, this, 'reply-${parentCommentId}')"></textarea>
+            <ul id="mentions-dropdown-reply-${parentCommentId}" class="mentions-dropdown"></ul>
             <button class="btn btn-sm btn-primary mt-1" onclick="postManager.submitReply(${postId}, ${parentCommentId}, this)">
                 Gửi
             </button>
@@ -1299,35 +1335,44 @@ class PostManager {
         $replyContainer.prepend($replyBox);
     }
 
-    submitReply(postId, parentCommentId, btn) {
+    async submitReply(postId, parentCommentId, btn, key = `reply-${parentCommentId}`) {
         const $input = $(btn).siblings(".reply-input");
         const content = $input.val().trim();
         if (!content) return;
 
         btn.disabled = true;
 
-        $.ajax({
-            url: `/api/comments/${parentCommentId}/reply`,
-            method: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({content}),
-            success: (res) => {
-                if (res && res.reply) {
-                    let $repliesGroup = $(`#replies-group-${parentCommentId}`);
-                    if ($repliesGroup.length === 0) {
-                        $repliesGroup = $(`<div class="replies-group" id="replies-group-${parentCommentId}"></div>`);
-                        $(`#comment-${parentCommentId}`).after($repliesGroup);
-                    }
-                    this.appendCommentToUI(postId, res.reply, 'append', parentCommentId);
-                    $input.closest(".reply-box").remove(); // Xóa ô nhập sau khi gửi
-                    this.showNotification("Phản hồi đã được gửi!", "success");
-                }
-            },
-            error: () => {
-                this.showNotification("Có lỗi xảy ra khi gửi phản hồi", "error");
-                btn.disabled = false;
+        try {
+            const mentionedUserIds = mentionsMap.get(key) || [];
+            const res = await fetch(`/api/comments/${parentCommentId}/reply`, {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({postId, content, mentionedUserIds})
+            });
+
+            if (!res.ok) {
+                const result = await res.json();
+                throw new Error(result.message || 'Failed to add reply');
             }
-        });
+
+            const data = await res.json();
+            if (data && data.reply) {
+                let $repliesGroup = $(`#replies-group-${parentCommentId}`);
+                if ($repliesGroup.length === 0) {
+                    $repliesGroup = $(`<div class="replies-group" id="replies-group-${parentCommentId}" style="position: relative"><div class="vertical-line"></div></div>`);
+                    $(`#comment-${parentCommentId}`).after($repliesGroup);
+                }
+                this.appendCommentToUI(postId, data.reply, 'append', parentCommentId);
+                $input.closest(".reply-box").remove(); // Xóa ô nhập sau khi gửi
+                mentionsMap.delete(key); // Clear mentions
+                this.showNotification("Phản hồi đã được gửi!", "success");
+            }
+        } catch (e) {
+            console.error(e);
+            this.showNotification("Có lỗi xảy ra khi gửi phản hồi: " + e.message, "error");
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     viewImage(imageUrl) {
@@ -1445,16 +1490,16 @@ class PostManager {
         }
     }
 
-    showMentionSuggestions(postId, inputElement) {
+    showMentionSuggestions(postId, inputElement, key) {
         const cursor = inputElement.selectionStart;
         const value = inputElement.value;
         const before = value.substring(0, cursor);
         const match = before.match(/@([^\s]*)$/);
 
-        const dropdown = document.getElementById(`mentions-dropdown-${postId}`);
+        const dropdown = document.getElementById(`mentions-dropdown-${key}`);
 
         if (!match) {
-            dropdown.style.display = "none";
+            if (dropdown) dropdown.style.display = "none";
             return;
         }
 
@@ -1464,7 +1509,7 @@ class PostManager {
         fetch(`/api/friends/search?keyword=${query}`)
             .then(res => res.json())
             .then(users => {
-                dropdown.innerHTML = "";
+                if (dropdown) dropdown.innerHTML = "";
 
                 users.forEach((user, i) => {
                     const li = document.createElement("li");
@@ -1474,30 +1519,26 @@ class PostManager {
                              alt="${user.fullName}" class="mention-avatar">
                         <span class="mention-name">${user.fullName}</span>
                     `;
-                    li.onclick = () => addMention(postId, user, inputElement);
-                    dropdown.appendChild(li);
+                    li.onclick = () => addMention(postId, user, inputElement, key);
+                    if (dropdown) dropdown.appendChild(li);
                 });
 
-                if (users.length > 0) {
-                    const rect = inputElement.getBoundingClientRect();
-                    if (dropdown.parentElement !== document.body) {
-                        document.body.appendChild(dropdown);
-                    }
-                    dropdown.style.position = 'fixed';
+                if (users.length > 0 && dropdown) {
+                    dropdown.style.position = 'absolute';
                     dropdown.style.zIndex = '10000';
-                    dropdown.style.top = `${rect.bottom + window.pageYOffset}px`;
-                    dropdown.style.left = `${rect.left + window.pageXOffset}px`;
-                    dropdown.style.width = `${rect.width}px`;
+                    dropdown.style.top = `${inputElement.offsetHeight}px`;
+                    dropdown.style.left = `0px`;
+                    dropdown.style.width = `${inputElement.offsetWidth}px`;
                     dropdown.style.display = "block";
                 } else {
-                    dropdown.style.display = "none";
+                    if (dropdown) dropdown.style.display = "none";
                 }
             });
     }
 
-    handleMentionKeyDown(evt, postId) {
-        const dropdown = document.getElementById(`mentions-dropdown-${postId}`);
-        if (dropdown.style.display !== 'block') return;
+    handleMentionKeyDown(evt, postId, key) {
+        const dropdown = document.getElementById(`mentions-dropdown-${key}`);
+        if (!dropdown || dropdown.style.display !== 'block') return;
 
         const items = dropdown.querySelectorAll('.mention-item');
         let idx = Array.from(items).findIndex(x => x.classList.contains('selected'));
@@ -1527,9 +1568,9 @@ class PostManager {
     }
 }
 
-let mentionsByPost = {};
+let mentionsMap = new Map(); // key => [userIds]
 
-function addMention(postId, user, inputElement) {
+function addMention(postId, user, inputElement, key) {
     const val = inputElement.value;
     const before = val.substring(0, postManager._mentionStart);
     const after = val.substring(inputElement.selectionStart);
@@ -1539,15 +1580,15 @@ function addMention(postId, user, inputElement) {
     inputElement.setSelectionRange(pos, pos);
     inputElement.focus();
 
-    if (!mentionsByPost[postId]) {
-        mentionsByPost[postId] = [];
+    if (!mentionsMap.has(key)) {
+        mentionsMap.set(key, []);
     }
-    if (!mentionsByPost[postId].includes(user.id)) {
-        mentionsByPost[postId].push(user.id);
+    if (!mentionsMap.get(key).includes(user.id)) {
+        mentionsMap.get(key).push(user.id);
     }
 
-    const dropdown = document.getElementById(`mentions-dropdown-${postId}`);
-    dropdown.style.display = "none";
+    const dropdown = document.getElementById(`mentions-dropdown-${key}`);
+    if (dropdown) dropdown.style.display = "none";
 }
 
 let stompClient = null;
