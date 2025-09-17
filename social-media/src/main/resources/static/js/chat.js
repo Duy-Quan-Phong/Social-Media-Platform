@@ -53,6 +53,44 @@ class ChatManager {
         });
     }
 
+    async loadActivityStatus(conversationId) {
+        try {
+            // Lấy thông tin participants để tìm user khác (trong private chat)
+            const response = await fetch(`/api/chat/conversation/${conversationId}/participants`);
+            const participants = await response.json();
+
+            const currentUserId = getCurrentUserId();
+            const otherUser = participants.find(p => p.id != currentUserId);
+
+            if (otherUser) {
+                // Gọi API để lấy trạng thái activity
+                const activityResponse = await fetch(`/api/activity/status/${otherUser.id}`);
+                const activityData = await activityResponse.json();
+
+                const statusEl = document.getElementById(`chat-status-${conversationId}`);
+                if (statusEl) {
+                    statusEl.textContent = activityData.lastActivity;
+                    statusEl.className = activityData.online ? 'sub online' : 'sub offline';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading activity status:', error);
+            const statusEl = document.getElementById(`chat-status-${conversationId}`);
+            if (statusEl) {
+                statusEl.textContent = 'Không xác định';
+            }
+        }
+    }
+
+    // Thêm method để update activity status realtime
+    updateActivityStatus(conversationId, isOnline, lastActivity) {
+        const statusEl = document.getElementById(`chat-status-${conversationId}`);
+        if (statusEl) {
+            statusEl.textContent = lastActivity;
+            statusEl.className = isOnline ? 'sub online' : 'sub offline';
+        }
+    }
+
     async openChat(targetKey, displayName, avatar, type = 'private') {
         let chatType = (type || 'private').toLowerCase();
         let domKey = String(targetKey);
@@ -189,7 +227,7 @@ class ChatManager {
       <img class="chat-avatar ${type === 'group' ? 'group' : ''}" src="${avatar || (type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="${name}">
       <div class="meta">
         <div class="name">${name || ''}</div>
-        <div class="sub">${type === 'group' ? 'Nhóm' : 'Đang hoạt động'}</div>
+        <div class="sub" id="chat-status-${chatId}">${type === 'group' ? 'Nhóm' : 'Đang kiểm tra...'}</div>
       </div>
     </div>
     <div class="chat-ctl"> 
@@ -225,6 +263,11 @@ class ChatManager {
         // Setup scroll listener for infinite scrolling
         const messagesBox = wrap.querySelector(`#messages-${chatId}`);
         messagesBox.addEventListener('scroll', () => this.handleScroll(chatId));
+
+        // Load activity status cho private chat
+        if (type === 'private') {
+            this.loadActivityStatus(chatId);
+        }
 
         return wrap;
     }

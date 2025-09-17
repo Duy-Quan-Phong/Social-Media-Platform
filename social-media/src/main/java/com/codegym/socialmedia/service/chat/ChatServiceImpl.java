@@ -9,6 +9,7 @@ import com.codegym.socialmedia.repository.ConversationRepository;
 import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.repository.MessageRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
+import com.codegym.socialmedia.service.user.UserActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private MessageRepository messageRepository;
     @Autowired private IUserRepository userRepository;
 
+    @Autowired private UserActivityService userActivityService;
     @Override
     public ConversationDto findOrCreatePrivateConversation(Long currentUserId, Long targetUserId) {
         Optional<Conversation> existing = conversationRepository
@@ -330,7 +332,8 @@ public class ChatServiceImpl implements ChatService {
         dto.setFullName(safeFullName(u));
         dto.setAvatar(u.getProfilePicture());
         dto.setRole(p.getRole().name());
-        dto.setOnline(true); // TODO: presence realtime
+        // Set trạng thái online thực tế
+        dto.setOnline(userActivityService.isOnline(u.getId()));
         return dto;
     }
 
@@ -380,6 +383,8 @@ public class ChatServiceImpl implements ChatService {
             if (other != null) {
                 dto.setName(safeFullName(other));
                 dto.setAvatar(other.getProfilePicture());
+                // Set trạng thái online cho private chat
+                dto.setOnline(userActivityService.isOnline(other.getId()));
             }
         } else {
             dto.setName(c.getConversationName());
@@ -387,6 +392,10 @@ public class ChatServiceImpl implements ChatService {
             List<ConversationParticipant> ps = participantRepository.findByConversationId(c.getId());
             dto.setParticipantCount(ps.size());
             dto.setParticipants(ps.stream().map(this::mapParticipantDto).collect(Collectors.toList()));
+            // Đối với group, kiểm tra có ít nhất 1 thành viên online không
+            boolean hasOnlineMembers = ps.stream()
+                    .anyMatch(p -> userActivityService.isOnline(p.getUser().getId()));
+            dto.setOnline(hasOnlineMembers);
         }
 
         Message last = messageRepository.findFirstByConversationIdOrderBySentAtDescMessageIdDesc(c.getId());
@@ -404,7 +413,6 @@ public class ChatServiceImpl implements ChatService {
         long unread = messageRepository.countUnreadMessages(c.getId(),paticipant.get().getLastReadMessageId());
         dto.setUnreadCount((int) unread);
         dto.setHasUnread(unread > 0);
-        dto.setOnline(true); // TODO
 
         return dto;
     }

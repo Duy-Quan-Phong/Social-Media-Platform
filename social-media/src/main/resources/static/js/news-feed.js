@@ -23,6 +23,7 @@ class NewsFeedManager {
 
             el.innerHTML = data.groups.map(group => {
                 const spanStyle = group.unreadCount && group.unreadCount > 0 ? '' : 'display: none;';
+                const onlineClass = group.online ? 'online' : 'offline';
                 return `
                     <div class="group-item-enhanced"
                          data-id="${group.id}" 
@@ -32,11 +33,16 @@ class NewsFeedManager {
                         <div style="position:relative">
                             <img src="${group.avatar || '/images/default-group-avatar.jpg'}" class="group-avatar">
                             <div class="group-member-count">${group.participantCount || 0}</div>
+                            <div class="online-dot ${onlineClass}"></div>
                         </div>
                         <div class="group-info">
                             <span class="group-name">${this.escape(group.name)}</span>
                             <div class="group-last-message">${group.lastMessage || 'Chưa có tin nhắn'}</div>
                             ${group.timeAgo ? `<div class="group-time">${group.timeAgo}</div>` : ''}
+                            <div class="user-activity-status ${onlineClass}">
+                                <span class="activity-dot"></span>
+                                <span>${group.online ? 'Có thành viên online' : 'Tất cả offline'}</span>
+                            </div>
                         </div>
                          <span class="badge bg-danger ms-2 span-conversation-id-${group.id}" style="${spanStyle}">
                             ${group.unreadCount || ''}
