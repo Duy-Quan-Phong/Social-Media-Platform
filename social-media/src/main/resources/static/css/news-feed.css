@@ -581,83 +581,56 @@ header {
     padding: 15px;
 }
 
-/* Responsive Media Queries */
-@media (max-width: 1200px) {
+/* Desktop ≥1200px */
+@media (min-width: 1200px) {
     .main-container {
-        grid-template-columns: 1fr 3fr 1fr;
+        display: grid;
+        grid-template-columns: 280px 1fr 300px; /* nav-sidebar | feed | sidebar */
+        gap: 20px;
         padding: 1.5rem;
     }
-    .sidebar {
-        width: 260px;
-    }
 }
 
-@media (max-width: 992px) {
+/* Tablet landscape: 992px–1199px */
+@media (max-width: 1199px) and (min-width: 992px) {
     .main-container {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+        display: grid;
+        grid-template-columns: 1fr 300px; /* feed + sidebar */
+        gap: 20px;
         padding: 1rem;
     }
-    .feed {
-        order: 2;
-        height: auto;
-    }
-    .sidebar {
-        order: 3;
-    }
-    #onlineFriendsList, #groupChatsList {
-        height: auto;
-        max-height: 200px;
-    }
-    .group-item-enhanced {
-        padding: 8px 10px;
-        gap: 10px;
-    }
-    .group-avatar {
-        width: 32px;
-        height: 32px;
-    }
-    .group-member-count {
-        width: 14px;
-        height: 14px;
-        font-size: 9px;
-    }
-    .post-creator{
-        margin-top: 2rem !important;
+    .nav-sidebar {
+        display: none; /* ẩn sidebar trái */
     }
 }
 
+
+
+/* Mobile ≤768px */
 @media (max-width: 768px) {
     .main-container {
         padding: 0.5rem;
     }
-    .sidebar,.nav-sidebar {
+    .sidebar,
+    .nav-sidebar {
         display: none !important;
     }
     .feed {
         padding: 0;
+        order: 1;
     }
     .post {
         padding: 1rem;
     }
-    .user-profile h4 {
-        font-size: 14px;
-    }
-    .nav-item {
-        font-size: 14px;
-    }
-    .nav-item i {
-        font-size: 18px;
-    }
-    .creator-info{
+    .creator-info {
         display: block !important;
     }
-    .creator-info > span{
+    .creator-info > span {
         margin-bottom: 10px !important;
     }
 }
 
+/* Small devices ≤576px */
 @media (max-width: 576px) {
     .avatar {
         width: 40px;
@@ -682,11 +655,28 @@ header {
         padding: 0.75rem;
         font-size: 0.9rem;
     }
-    .friend-avatar, .group-avatar {
-        width: 30px;
-        height: 30px;
+    .friend-avatar,
+    .group-avatar {
+        width: 28px;
+        height: 28px;
     }
-    .friend-name, .group-name {
-        font-size: 13px;
+    .friend-name,
+    .group-name {
+        font-size: 12px;
+    }
+}
+@media (max-width: 991px) {
+    .sidebar,
+    .nav-sidebar {
+        display: none !important;
+    }
+    .main-container {
+        display: block;
+        padding: 10px;
+    }
+    .feed {
+        width: 100%;
+        padding: 0;
+        height: auto;
     }
 }
