@@ -15,7 +15,7 @@ public interface PostCommentService {
 
     Page<DisplayCommentDTO> getCommentsByPost(Long postId, User currentUser, int page, int size);
     // Thêm method update comment
-    PostComment updateComment(Long commentId, User currentUser, String newContent);
+    PostComment updateComment(Long commentId, User currentUser, String newContent, List<Long> mentionIds);
 
     PostComment deleteComment(Long commentId, User currentUser);
     // Thêm method lấy comment theo commentId

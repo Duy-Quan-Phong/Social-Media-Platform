@@ -146,11 +146,11 @@ public class PostCommentServiceImpl implements PostCommentService {
 
 
     @Override
-    public PostComment updateComment(Long commentId, User currentUser, String newContent) {
+    public PostComment updateComment(Long commentId, User currentUser, String newContent, List<Long> mentionIds) {
         PostComment comment = postCommentRepository.findByIdAndUser(commentId, currentUser)
                 .orElseThrow(() -> new RuntimeException("Comment không tồn tại hoặc bạn không có quyền sửa"));
-
         comment.setContent(newContent);
+        handleMentions(comment, currentUser, mentionIds);
         comment.setUpdatedAt(LocalDateTime.now());
         return postCommentRepository.save(comment);
     }

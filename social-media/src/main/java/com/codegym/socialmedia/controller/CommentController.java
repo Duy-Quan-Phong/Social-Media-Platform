@@ -57,7 +57,7 @@ public class CommentController {
     @PutMapping("/{id}")
     public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
-        PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent());
+        PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent(),req.getMentionedUserIds());
         return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
     }
 
