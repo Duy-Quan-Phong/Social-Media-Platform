@@ -1042,6 +1042,86 @@ class EnhancedChatManager extends ChatManager {
     });
 }
 
+
+function showMentionNotification(notification) {
+    // Tạo toast notification cho mention
+    const toastHtml = `
+        <div class="toast mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="toast-header">
+                <img src="${notification.sender.avatarUrl || '/images/default-avatar.jpg'}" 
+                     class="rounded me-2" width="20" height="20" alt="Avatar">
+                <strong class="me-auto">${notification.sender.username}</strong>
+                <small class="text-muted">vừa xong</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                <i class="fas fa-at text-primary"></i> 
+                Đã nhắc đến bạn trong nhóm chat
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-primary" onclick="openMentionChat(${notification.referenceId})">
+                        Xem tin nhắn
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Tạo container cho toast nếu chưa có
+    let toastContainer = document.getElementById('mention-toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'mention-toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '11000';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Thêm toast vào container
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    // Khởi tạo và show toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    // Tự động xóa toast sau khi hide
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
+
+function openMentionChat(conversationId) {
+    // Tìm thông tin conversation từ cache hoặc API
+    fetch(`/api/chat/conversation/${conversationId}/participants`)
+        .then(response => response.json())
+        .then(participants => {
+            // Tìm thông tin conversation
+            fetch(`/api/conversations`)
+                .then(response => response.json())
+                .then(conversations => {
+                    const conversation = conversations.find(c => c.id == conversationId);
+                    if (conversation && chatManager) {
+                        chatManager.openExistingConversation(
+                            conversationId,
+                            conversation.name,
+                            conversation.avatar,
+                            conversation.type || 'group'
+                        );
+                    }
+                })
+                .catch(error => console.error('Error loading conversation:', error));
+        })
+        .catch(error => console.error('Error loading participants:', error));
+
+    // Đóng tất cả toast mentions
+    document.querySelectorAll('.mention-toast').forEach(toast => {
+        const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+        bsToast.hide();
+    });
+}
+
+
 async function openChat(userId, name, avatar) {
     try {
         const response = await fetch('/api/chat/find-or-create-conversation', {
@@ -1064,6 +1144,7 @@ async function openChat(userId, name, avatar) {
     }
 }
 
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!chatManager) {
         window.chatManager = chatManager = new EnhancedChatManager();
@@ -1071,6 +1152,36 @@ document.addEventListener('DOMContentLoaded', () => {
     connectStompClient();
     if (document.getElementById('onlineFriendsList')) chatManager.loadOnlineFriends();
     bindHeaderDropdown();
+
+    // **THÊM MỚI: CSS cho mention toast**
+    const mentionToastStyles = `
+        <style>
+        .mention-toast {
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-left: 4px solid #1877f2;
+        }
+        .mention-toast .toast-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .mention-toast .toast-body {
+            background-color: white;
+        }
+        #mention-toast-container {
+            z-index: 12000 !important;
+            top: 80px !important; /* Dưới header */
+        }
+        </style>
+    `;
+
+    // Thêm styles vào head
+    if (!document.getElementById('mention-toast-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'mention-toast-styles';
+        styleEl.innerHTML = mentionToastStyles.replace(/<\/?style>/g, ''); // Remove style tags
+        document.head.appendChild(styleEl);
+    }
 });
 
 window.openChat = openChat;

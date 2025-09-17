@@ -73,10 +73,16 @@ function decreaseBadge(by = 1) {
 }
 
 function buildLink(n) {
-
     if (!n) return '#';
+
     switch ((n.referenceType || '').toUpperCase()) {
         case 'POST':
+            // Kiểm tra nếu là mention notification thì có thể là chat mention
+            if (n.notificationType === 'MENTION_COMMENT') {
+                // Trả về link để mở chat (JavaScript sẽ xử lý)
+                return `javascript:openMentionChat(${n.referenceId})`;
+            }
+            // Post bình thường
             let profileUrl = '/news-feed' + '?postID=' + n.referenceId;
             return profileUrl;
         case 'COMMENT':
@@ -102,7 +108,14 @@ function buildNotificationText(n) {
         case 'FRIEND_REQUEST':
             return `${username} đã gửi lời mời kết bạn`;
         case 'MENTION_COMMENT':
-            return `${username} đã nhắc đến bạn trong một bình luận`;
+            // Kiểm tra reference type để phân biệt mention trong comment vs chat
+            if (n.referenceType === 'POST') {
+                // Nếu referenceType là POST thì đây là mention trong chat (vì dùng POST làm reference)
+                return `${username} đã nhắc đến bạn trong nhóm chat`;
+            } else {
+                // Mention trong comment (logic cũ)
+                return `${username} đã nhắc đến bạn trong một bình luận`;
+            }
         default:
             return n.message || "Bạn có một thông báo mới";
     }

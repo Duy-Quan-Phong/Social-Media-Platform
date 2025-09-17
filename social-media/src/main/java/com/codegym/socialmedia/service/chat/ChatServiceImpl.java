@@ -4,6 +4,7 @@ import com.codegym.socialmedia.component.CloudinaryService;
 import com.codegym.socialmedia.dto.chat.*;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.conversation.*;
+import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.ConversationParticipantRepository;
 import com.codegym.socialmedia.repository.ConversationRepository;
 import com.codegym.socialmedia.repository.IUserRepository;
@@ -15,6 +16,12 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.Set;
+import java.util.HashSet;
+import com.codegym.socialmedia.service.notification.NotificationService;
+import com.codegym.socialmedia.model.social_action.Notification;
 
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -30,6 +37,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private ConversationParticipantRepository participantRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private IUserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     @Autowired private UserActivityService userActivityService;
     @Override
@@ -82,7 +90,7 @@ public class ChatServiceImpl implements ChatService {
         message.setIsDeleted(false);
         message.setIsRecalled(false);
 
-        // Handle attachments
+        // Handle attachments (existing code)
         if (!request.getAttachments().isEmpty()) {
             for (AttachmentDto a : request.getAttachments()) {
                 MessageAttachment attachment = new MessageAttachment();
@@ -95,10 +103,9 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // Set messageType logically (similar to DTO)
-        if (request.getContent() != null && request.getContent().contains("call")) {  // Example for CALL detection; adjust as needed
+        // Set messageType logically
+        if (request.getContent() != null && request.getContent().contains("call")) {
             message.setMessageType(Message.MessageType.CALL);
-            // Set callStatus, duration if applicable
         } else if (message.getAttachments().isEmpty()) {
             message.setMessageType(Message.MessageType.TEXT);
         } else {
@@ -110,14 +117,63 @@ public class ChatServiceImpl implements ChatService {
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
 
-        ConversationParticipant participant = participantRepository.findByConversationIdAndUserId(conversation.getId(),senderId).orElse(null);
-        participant.setLastReadMessageId(saved.getMessageId());
-        participantRepository.save(participant);
+        // Mark as read for sender
+        ConversationParticipant participant = participantRepository
+                .findByConversationIdAndUserId(conversation.getId(), senderId).orElse(null);
+        if (participant != null) {
+            participant.setLastReadMessageId(saved.getMessageId());
+            participantRepository.save(participant);
+        }
+
+        // **THÊM MỚI: Xử lý mention trong GROUP chat**
+        if (conversation.getConversationType() == Conversation.ConversationType.GROUP &&
+                request.getContent() != null && request.getContent().contains("@")) {
+            handleMentionsInGroupMessage(saved, sender, conversation);
+        }
 
         MessageDto dto = mapToMessageDto(saved);
         dto.setConversationId(conversation.getId());
         dto.setConversationType(conversation.getConversationType().name().toLowerCase());
         return dto;
+    }
+
+    private void handleMentionsInGroupMessage(Message message, User sender, Conversation conversation) {
+        String content = message.getContent();
+        if (content == null) return;
+
+        // Regex để tìm @username trong tin nhắn
+        Pattern mentionPattern = Pattern.compile("@(\\w+)");
+        Matcher matcher = mentionPattern.matcher(content);
+
+        Set<String> mentionedUsernames = new HashSet<>();
+        while (matcher.find()) {
+            mentionedUsernames.add(matcher.group(1));
+        }
+
+        if (mentionedUsernames.isEmpty()) return;
+
+        // Lấy danh sách participants trong nhóm
+        List<ConversationParticipant> participants = participantRepository
+                .findByConversationId(conversation.getId());
+
+        for (ConversationParticipant participant : participants) {
+            User user = participant.getUser();
+
+            // Không gửi thông báo cho chính người gửi
+            if (user.getId().equals(sender.getId())) continue;
+
+            // Kiểm tra xem user có được mention không
+            if (mentionedUsernames.contains(user.getUsername())) {
+                // Gửi thông báo mention
+                notificationService.notify(
+                        sender.getId(),
+                        user.getId(),
+                        Notification.NotificationType.MENTION_COMMENT, // Tái sử dụng type có sẵn
+                        Notification.ReferenceType.POST, // Hoặc tạo type mới CHAT
+                        conversation.getId() // Reference đến conversation
+                );
+            }
+        }
     }
 
     @Override
