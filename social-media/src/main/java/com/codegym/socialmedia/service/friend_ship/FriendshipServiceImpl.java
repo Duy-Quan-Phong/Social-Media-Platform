@@ -10,6 +10,7 @@ import com.codegym.socialmedia.model.social_action.FriendshipId;
 import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.FriendshipRepository;
 import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.notification.NotificationService;
 import com.codegym.socialmedia.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public class FriendshipServiceImpl implements FriendshipService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private ChatService chatService;
 
     @Override
     public boolean addFriendship(User user) {
@@ -85,6 +89,9 @@ public class FriendshipServiceImpl implements FriendshipService {
         friendship.setStatus(Friendship.FriendshipStatus.ACCEPTED);
         try {
             friendshipRepository.save(friendship);
+            if(user.getPrivacySettings().getAllowSendMessage()!=PrivacyLevel.PRIVATE &&
+                    currentUser.getPrivacySettings().getAllowSendMessage()!=PrivacyLevel.PRIVATE)
+                chatService.findOrCreatePrivateConversation(currentUser.getId(), user.getId());
             return true;
         } catch (Exception e) {
             e.printStackTrace();

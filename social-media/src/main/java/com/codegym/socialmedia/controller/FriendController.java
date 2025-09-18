@@ -43,59 +43,14 @@ public class FriendController {
 
 
     @GetMapping("/friends")
-    public String friends(Model model, @RequestParam(value = "filter", defaultValue = "all") String filter,
-                          @RequestParam(value = "page", defaultValue = "0") int page,
-                          @RequestParam(value = "size", defaultValue = "10") int size
+    public String friends(Model model, @RequestParam(value = "filter", defaultValue = "all") String filter
             ,@RequestParam(value = "targetUserId", required = false) Long targetUserId) {
 
-        User u = null;
-        if(targetUserId == null) {
-            u = userService.getCurrentUser();
-            targetUserId = u.getId();
-        }else{
-            u = userService.getUserById(targetUserId);
-        }
-
-        Page<FriendDto> friends;
-        String listTitle;
-
         boolean isSender = false, isReceiver = false;
-        switch (filter) {
-            case "mutual":
-                model.addAttribute("friendshipStatus", Friendship.FriendshipStatus.ACCEPTED.name());
-                friends = friendshipService.findMutualFriends(targetUserId, targetUserId, page, size);
-                listTitle = "Bạn chung";
-                break;
-            case "non-friends":
-                model.addAttribute("friendshipStatus", Friendship.FriendshipStatus.NONE.name());
-                friends = friendshipService.findNonFriends(targetUserId, page, size);
-                listTitle = "Chưa kết bạn";
-                break;
-            case "sent-requests":
-                isSender = true;
-                model.addAttribute("friendshipStatus", Friendship.FriendshipStatus.PENDING.name());
-                friends = friendshipService.findSentFriendRequests(targetUserId, page, size);
-                listTitle = "Lời mời đã gửi";
-                break;
-            case "received-requests":
-                isReceiver = true;
-                model.addAttribute("friendshipStatus", Friendship.FriendshipStatus.PENDING.name());
-                friends = friendshipService.findReceivedFriendRequests(targetUserId, page, size);
-                listTitle = "Lời mời nhận được";
-                break;
-            case "all":
-            default:
-                model.addAttribute("friendshipStatus", Friendship.FriendshipStatus.ACCEPTED.name());
-                friends = friendshipService.getVisibleFriendList(u, page, size);
-                listTitle = "Danh sách bạn bè";
-                break;
-        }
         model.addAttribute("isReceiver", isReceiver);
         model.addAttribute("isSender", isSender);
-        model.addAttribute("friends", friends);
         model.addAttribute("targetUserId", targetUserId);
         model.addAttribute("filter", filter);
-        model.addAttribute("listTitle", listTitle);
         return "friend/index";
     }
 

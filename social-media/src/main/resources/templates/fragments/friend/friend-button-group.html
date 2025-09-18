@@ -25,7 +25,7 @@
             </button>
         </div>
         <div th:if="${isReceiver}">
-            <button class="btn btn-success acceptFriendBtn"  th:data-username="${username}">
+            <button class="btn btn-success acceptFriendBtn mb-3"  th:data-username="${username}">
                 <i class="fa-solid fa-user-check"></i> Chấp nhận
             </button>
             <button class="btn btn-danger  reflectFriendBtn"  th:classappend="${addMargin} ? 'mt-3' : ''" th:data-username="${username}">

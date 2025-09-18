@@ -1,5 +1,5 @@
 let friendshipStatus = 'ACCEPTED'
-let page = 1;
+let page = 0;
 const size = 10;
 let isLoading = false;
 let hasMoreData = true;
@@ -22,6 +22,7 @@ $(document).ready(function () {
 
         page = 0;
         hasMoreData = true;
+        $('#friends-list').empty(); // reset danh sách khi đổi filter
         console.log('Filter changed to:', currentFilter);
         loadMoreFriends();
     });
@@ -34,11 +35,10 @@ $(document).ready(function () {
         }
     });
 
-    // Tải dữ liệu ban đầu nếu nội dung không đủ để cuộn
-    if ($(document).height() <= $(window).height()) {
-        loadMoreFriends();
-    }
+    // 🔹 Gọi loadMoreFriends() ngay khi DOM đã tải
+    loadMoreFriends();
 });
+
 
 let isSender = isReceiver = false
 
@@ -128,16 +128,6 @@ function loadMoreFriends() {
                         }
                     });
 
-                    // Thêm nút chat cho bạn bè
-                    if (friendshipStatus === 'ACCEPTED') {
-                        const chatButtonHtml = `
-                            <button class="btn btn-info btn-sm mt-2" 
-                                    onclick="openChatFromProfile('${friend.id}', '${friend.fullName}', '${friend.avatarUrl || '/images/default-avatar.jpg'}')">
-                                <i class="fa-solid fa-message"></i> Nhắn tin
-                            </button>
-                        `;
-                        $(`#chat-btn-${friend.username}`).html(chatButtonHtml);
-                    }
                 }
             });
 
