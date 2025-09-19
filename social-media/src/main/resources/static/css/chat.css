@@ -380,12 +380,12 @@ emoji-picker {
 }
 
 .chat-user .meta .sub.online {
-    color: #42b883;
+    color: #41ff2c;
 }
 
 .chat-user .meta .sub.online::before {
     content: '•';
-    color: #42b883;
+    color: #41ff2c;
     font-weight: bold;
     margin-right: 2px;
 }
