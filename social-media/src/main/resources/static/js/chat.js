@@ -1012,41 +1012,68 @@ function bindHeaderDropdown() {
 class EnhancedChatManager extends ChatManager {
 }
 
- function connectStompClient() {
+function connectStompClient() {
     if (stompClient && stompClient.connected) return;
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
 
-    stompClient.connect({},  () => {
-        console.log(" Global Stomp connected");
+    stompClient.connect({}, () => {
+        console.log("Global Stomp connected");
         if (isSubscribed) return;
         isSubscribed = true;
-        // Subscribe to unread messages after connection
+
+        // Existing subscriptions...
         stompClient.subscribe("/user/queue/unread", (message) => {
             if (chatManager) {
                 chatManager.handleUnreadMessage(JSON.parse(message.body));
-            } else {
-                console.error("chatManager is not initialized");
             }
         });
 
-        // Subscribe to call invites
         stompClient.subscribe("/user/queue/call-invite", (message) => {
-            console.log(" Received call invite:", message.body);
+            console.log("Received call invite:", message.body);
             const invite = JSON.parse(message.body);
             const url = `/video_call/${invite.conversationId}?isIncoming=true&callerId=${invite.callerId}`;
             window.open(url, `VideoPopup${invite.conversationId}`, 'width=1070,height=600,resizable=yes,scrollbars=no');
         });
+
+        // NEW: Subscribe to auto-open chat notifications
+        stompClient.subscribe("/user/queue/auto-open-chat", (message) => {
+            const data = JSON.parse(message.body);
+            handleAutoOpenChat(data);
+        });
+
     }, (error) => {
         console.error("Stomp connection error:", error);
     });
 }
 
+function handleAutoOpenChat(data) {
+    console.log("Auto-opening chat for mention:", data);
+
+    if (!data.conversationId) {
+        console.error("No conversationId provided for auto-open chat");
+        return;
+    }
+
+    // Show mention notification first
+    showMentionNotification({
+        sender: {
+            username: data.mentionedBy || 'Someone',
+            avatarUrl: data.mentionedByAvatar || '/images/default-avatar.jpg'
+        },
+        referenceId: data.conversationId
+    });
+
+    // Auto-open the chat after a short delay
+    setTimeout(() => {
+        openMentionChat(data.conversationId);
+    }, 1000); // 1 second delay to let user see the notification
+}
+
 
 function showMentionNotification(notification) {
-    // Tạo toast notification cho mention
     const toastHtml = `
-        <div class="toast mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+        <div class="toast mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="8000">
             <div class="toast-header">
                 <img src="${notification.sender.avatarUrl || '/images/default-avatar.jpg'}" 
                      class="rounded me-2" width="20" height="20" alt="Avatar">
@@ -1057,68 +1084,92 @@ function showMentionNotification(notification) {
             <div class="toast-body">
                 <i class="fas fa-at text-primary"></i> 
                 Đã nhắc đến bạn trong nhóm chat
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-primary" onclick="openMentionChat(${notification.referenceId})">
-                        Xem tin nhắn
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary flex-fill" onclick="openMentionChat(${notification.referenceId})">
+                        <i class="fas fa-comment"></i> Mở chat
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="dismissMentionNotification(this)">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
         </div>
     `;
 
-    // Tạo container cho toast nếu chưa có
     let toastContainer = document.getElementById('mention-toast-container');
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'mention-toast-container';
         toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '11000';
+        toastContainer.style.zIndex = '12000';
         document.body.appendChild(toastContainer);
     }
 
-    // Thêm toast vào container
     toastContainer.insertAdjacentHTML('beforeend', toastHtml);
 
-    // Khởi tạo và show toast
     const toastElement = toastContainer.lastElementChild;
     const toast = new bootstrap.Toast(toastElement);
     toast.show();
 
-    // Tự động xóa toast sau khi hide
     toastElement.addEventListener('hidden.bs.toast', () => {
         toastElement.remove();
     });
 }
 
+function dismissMentionNotification(button) {
+    const toast = button.closest('.toast');
+    const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+    bsToast.hide();
+}
 
-function openMentionChat(conversationId) {
-    // Tìm thông tin conversation từ cache hoặc API
-    fetch(`/api/chat/conversation/${conversationId}/participants`)
-        .then(response => response.json())
-        .then(participants => {
-            // Tìm thông tin conversation
-            fetch(`/api/conversations`)
-                .then(response => response.json())
-                .then(conversations => {
-                    const conversation = conversations.find(c => c.id == conversationId);
-                    if (conversation && chatManager) {
-                        chatManager.openExistingConversation(
-                            conversationId,
-                            conversation.name,
-                            conversation.avatar,
-                            conversation.type || 'group'
-                        );
-                    }
-                })
-                .catch(error => console.error('Error loading conversation:', error));
-        })
-        .catch(error => console.error('Error loading participants:', error));
+async function openMentionChat(conversationId) {
+    try {
+        // Get conversation details first
+        const conversationResponse = await fetch(`/api/conversations`);
+        const conversations = await conversationResponse.json();
 
-    // Đóng tất cả toast mentions
-    document.querySelectorAll('.mention-toast').forEach(toast => {
-        const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
-        bsToast.hide();
-    });
+        const conversation = conversations.find(c => c.id == conversationId);
+
+        if (conversation && chatManager) {
+            // Auto-open the conversation
+            chatManager.openExistingConversation(
+                conversationId,
+                conversation.name,
+                conversation.avatar,
+                conversation.type || 'group'
+            );
+
+            console.log(`Auto-opened chat: ${conversation.name}`);
+        } else {
+            console.error(`Conversation ${conversationId} not found`);
+
+            // Fallback: try to get participants to determine conversation name
+            const participantsResponse = await fetch(`/api/chat/conversation/${conversationId}/participants`);
+            const participants = await participantsResponse.json();
+
+            if (participants && participants.length > 0 && chatManager) {
+                const conversationName = participants.length > 2
+                    ? `Nhóm ${participants.length} thành viên`
+                    : participants[0].fullName;
+
+                chatManager.openExistingConversation(
+                    conversationId,
+                    conversationName,
+                    '/images/default-group-avatar.jpg',
+                    participants.length > 2 ? 'group' : 'private'
+                );
+            }
+        }
+
+        // Close mention notifications
+        document.querySelectorAll('.mention-toast').forEach(toast => {
+            const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+            bsToast.hide();
+        });
+
+    } catch (error) {
+        console.error('Error auto-opening chat:', error);
+    }
 }
 
 
@@ -1175,11 +1226,57 @@ document.addEventListener('DOMContentLoaded', () => {
         </style>
     `;
 
+
+    const mentionNotificationStyles = `
+        <style>
+       .mention-toast {
+            min-width: 320px;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-left: 4px solid #1877f2;
+            animation: slideInFromRight 0.3s ease-out;
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .mention-toast .toast-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .mention-toast .toast-body {
+            background-color: white;
+        }
+        
+        #mention-toast-container {
+            z-index: 12000 !important;
+            top: 80px !important;
+        }
+
+        </style>
+`;
+
     // Thêm styles vào head
     if (!document.getElementById('mention-toast-styles')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'mention-toast-styles';
         styleEl.innerHTML = mentionToastStyles.replace(/<\/?style>/g, ''); // Remove style tags
+        document.head.appendChild(styleEl);
+    }
+
+    if (!document.getElementById('mention-notification-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'mention-notification-styles';
+        styleEl.innerHTML = mentionNotificationStyles;
         document.head.appendChild(styleEl);
     }
 });

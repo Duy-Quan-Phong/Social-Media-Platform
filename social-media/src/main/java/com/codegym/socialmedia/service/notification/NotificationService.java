@@ -9,14 +9,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -27,26 +27,7 @@ public class NotificationService {
     private final SimpMessagingTemplate messaging;
 
     @Autowired
-    private   UserService userService;
-
-
-    @Component
-    public class NotificationMapper {
-        public NotificationDTO toDto(Notification n) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            String formattedDate = n.getCreatedAt().format(formatter);
-            var s = n.getSender();
-
-            return new NotificationDTO(
-                    n.getId(),
-                    n.getNotificationType().name(),
-                    formattedDate,
-                    n.getReferenceId(),
-                    n.getReferenceType().name(),
-                    new NotificationDTO.SenderDTO(s.getId(), s.getUsername(), s.getProfilePicture())
-            );
-        }
-    }
+    private UserService userService;
 
     @Transactional
     public Notification notify(
@@ -63,9 +44,23 @@ public class NotificationService {
         n.setReferenceId(refId);
         n = repo.save(n);
 
-        // gửi tới hàng đợi cá nhân của người nhận
-        String userKey = n.getReceiver().getUsername(); // hoặc String.valueOf(receiverId) nếu Principal là id
+        // Gửi notification thông thường
+        String userKey = n.getReceiver().getUsername();
         messaging.convertAndSendToUser(userKey, "/queue/notifications", mapper.toDto(n));
+
+        // Nếu là mention trong chat, gửi thêm message để auto-open chat
+        if (type == Notification.NotificationType.MENTION_COMMENT &&
+                refType == Notification.ReferenceType.POST) { // POST được dùng cho conversation
+
+            // Tạo special message để trigger auto-open chat
+            Map<String, Object> autoOpenData = new HashMap<>();
+            autoOpenData.put("type", "AUTO_OPEN_CHAT");
+            autoOpenData.put("conversationId", refId);
+            autoOpenData.put("mentionedBy", n.getSender().getFirstName() + " " + n.getSender().getLastName());
+            autoOpenData.put("mentionedByAvatar", n.getSender().getProfilePicture());
+
+            messaging.convertAndSendToUser(userKey, "/queue/auto-open-chat", autoOpenData);
+        }
 
         return n;
     }

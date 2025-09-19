@@ -141,7 +141,6 @@ public class ChatServiceImpl implements ChatService {
         String content = message.getContent();
         if (content == null) return;
 
-        // Regex để tìm @username trong tin nhắn
         Pattern mentionPattern = Pattern.compile("@(\\w+)");
         Matcher matcher = mentionPattern.matcher(content);
 
@@ -152,30 +151,26 @@ public class ChatServiceImpl implements ChatService {
 
         if (mentionedUsernames.isEmpty()) return;
 
-        // Lấy danh sách participants trong nhóm
         List<ConversationParticipant> participants = participantRepository
                 .findByConversationId(conversation.getId());
 
         for (ConversationParticipant participant : participants) {
             User user = participant.getUser();
 
-            // Không gửi thông báo cho chính người gửi
             if (user.getId().equals(sender.getId())) continue;
 
-            // Kiểm tra xem user có được mention không
             if (mentionedUsernames.contains(user.getUsername())) {
-                // Gửi thông báo mention
+                // Gửi notification với conversationId để auto-open chat
                 notificationService.notify(
                         sender.getId(),
                         user.getId(),
-                        Notification.NotificationType.MENTION_COMMENT, // Tái sử dụng type có sẵn
-                        Notification.ReferenceType.POST, // Hoặc tạo type mới CHAT
-                        conversation.getId() // Reference đến conversation
+                        Notification.NotificationType.MENTION_COMMENT,
+                        Notification.ReferenceType.POST, // Sử dụng POST type
+                        conversation.getId() // Gửi conversationId thay vì message.getId()
                 );
             }
         }
     }
-
     @Override
     public List<MessageDto> getChatHistory(Long userId1, Long userId2) {
         return conversationRepository.findPrivateConversationBetweenUsers(userId1, userId2)

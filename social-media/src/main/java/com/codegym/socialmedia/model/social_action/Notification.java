@@ -27,9 +27,13 @@ public class Notification {
     private User receiver;  // ai nhận thông báo
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "notification_type", length = 50) // Thêm length
     private NotificationType notificationType;
 
-    @Enumerated(EnumType.STRING) private ReferenceType referenceType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reference_type", length = 50) // Thêm length
+    private ReferenceType referenceType;
+
     private Long referenceId;
 
     private boolean isRead = false;
