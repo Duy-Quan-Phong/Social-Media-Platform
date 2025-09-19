@@ -4,16 +4,24 @@ import com.codegym.socialmedia.component.CloudinaryService;
 import com.codegym.socialmedia.dto.chat.*;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.conversation.*;
+import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.ConversationParticipantRepository;
 import com.codegym.socialmedia.repository.ConversationRepository;
 import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.repository.MessageRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
+import com.codegym.socialmedia.service.user.UserActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.Set;
+import java.util.HashSet;
+import com.codegym.socialmedia.service.notification.NotificationService;
+import com.codegym.socialmedia.model.social_action.Notification;
 
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -29,7 +37,9 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private ConversationParticipantRepository participantRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private IUserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
+    @Autowired private UserActivityService userActivityService;
     @Override
     public ConversationDto findOrCreatePrivateConversation(Long currentUserId, Long targetUserId) {
         Optional<Conversation> existing = conversationRepository
@@ -80,7 +90,7 @@ public class ChatServiceImpl implements ChatService {
         message.setIsDeleted(false);
         message.setIsRecalled(false);
 
-        // Handle attachments
+        // Handle attachments (existing code)
         if (!request.getAttachments().isEmpty()) {
             for (AttachmentDto a : request.getAttachments()) {
                 MessageAttachment attachment = new MessageAttachment();
@@ -93,10 +103,9 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // Set messageType logically (similar to DTO)
-        if (request.getContent() != null && request.getContent().contains("call")) {  // Example for CALL detection; adjust as needed
+        // Set messageType logically
+        if (request.getContent() != null && request.getContent().contains("call")) {
             message.setMessageType(Message.MessageType.CALL);
-            // Set callStatus, duration if applicable
         } else if (message.getAttachments().isEmpty()) {
             message.setMessageType(Message.MessageType.TEXT);
         } else {
@@ -108,9 +117,19 @@ public class ChatServiceImpl implements ChatService {
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
 
-        ConversationParticipant participant = participantRepository.findByConversationIdAndUserId(conversation.getId(),senderId).orElse(null);
-        participant.setLastReadMessageId(saved.getMessageId());
-        participantRepository.save(participant);
+        // Mark as read for sender
+        ConversationParticipant participant = participantRepository
+                .findByConversationIdAndUserId(conversation.getId(), senderId).orElse(null);
+        if (participant != null) {
+            participant.setLastReadMessageId(saved.getMessageId());
+            participantRepository.save(participant);
+        }
+
+        // **THÊM MỚI: Xử lý mention trong GROUP chat**
+        if (conversation.getConversationType() == Conversation.ConversationType.GROUP &&
+                request.getContent() != null && request.getContent().contains("@")) {
+            handleMentionsInGroupMessage(saved, sender, conversation);
+        }
 
         MessageDto dto = mapToMessageDto(saved);
         dto.setConversationId(conversation.getId());
@@ -118,6 +137,40 @@ public class ChatServiceImpl implements ChatService {
         return dto;
     }
 
+    private void handleMentionsInGroupMessage(Message message, User sender, Conversation conversation) {
+        String content = message.getContent();
+        if (content == null) return;
+
+        Pattern mentionPattern = Pattern.compile("@(\\w+)");
+        Matcher matcher = mentionPattern.matcher(content);
+
+        Set<String> mentionedUsernames = new HashSet<>();
+        while (matcher.find()) {
+            mentionedUsernames.add(matcher.group(1));
+        }
+
+        if (mentionedUsernames.isEmpty()) return;
+
+        List<ConversationParticipant> participants = participantRepository
+                .findByConversationId(conversation.getId());
+
+        for (ConversationParticipant participant : participants) {
+            User user = participant.getUser();
+
+            if (user.getId().equals(sender.getId())) continue;
+
+            if (mentionedUsernames.contains(user.getUsername())) {
+                // Gửi notification với conversationId để auto-open chat
+                notificationService.notify(
+                        sender.getId(),
+                        user.getId(),
+                        Notification.NotificationType.MENTION_COMMENT,
+                        Notification.ReferenceType.POST, // Sử dụng POST type
+                        conversation.getId() // Gửi conversationId thay vì message.getId()
+                );
+            }
+        }
+    }
     @Override
     public List<MessageDto> getChatHistory(Long userId1, Long userId2) {
         return conversationRepository.findPrivateConversationBetweenUsers(userId1, userId2)
@@ -330,7 +383,8 @@ public class ChatServiceImpl implements ChatService {
         dto.setFullName(safeFullName(u));
         dto.setAvatar(u.getProfilePicture());
         dto.setRole(p.getRole().name());
-        dto.setOnline(true); // TODO: presence realtime
+        // Set trạng thái online thực tế
+        dto.setOnline(userActivityService.isOnline(u.getId()));
         return dto;
     }
 
@@ -380,6 +434,8 @@ public class ChatServiceImpl implements ChatService {
             if (other != null) {
                 dto.setName(safeFullName(other));
                 dto.setAvatar(other.getProfilePicture());
+                // Set trạng thái online cho private chat
+                dto.setOnline(userActivityService.isOnline(other.getId()));
             }
         } else {
             dto.setName(c.getConversationName());
@@ -387,6 +443,10 @@ public class ChatServiceImpl implements ChatService {
             List<ConversationParticipant> ps = participantRepository.findByConversationId(c.getId());
             dto.setParticipantCount(ps.size());
             dto.setParticipants(ps.stream().map(this::mapParticipantDto).collect(Collectors.toList()));
+            // Đối với group, kiểm tra có ít nhất 1 thành viên online không
+            boolean hasOnlineMembers = ps.stream()
+                    .anyMatch(p -> userActivityService.isOnline(p.getUser().getId()));
+            dto.setOnline(hasOnlineMembers);
         }
 
         Message last = messageRepository.findFirstByConversationIdOrderBySentAtDescMessageIdDesc(c.getId());
@@ -404,7 +464,6 @@ public class ChatServiceImpl implements ChatService {
         long unread = messageRepository.countUnreadMessages(c.getId(),paticipant.get().getLastReadMessageId());
         dto.setUnreadCount((int) unread);
         dto.setHasUnread(unread > 0);
-        dto.setOnline(true); // TODO
 
         return dto;
     }

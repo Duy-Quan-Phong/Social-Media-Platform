@@ -297,6 +297,83 @@
     }
 }
 
+/* User Activity Status */
+.user-activity-status {
+    font-size: 12px;
+    color: #65676b;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-activity-status.online {
+    color: #42b883;
+}
+
+.user-activity-status .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #42b883;
+    display: inline-block;
+}
+
+.user-activity-status.offline .activity-dot {
+    background: #8a8d91;
+}
+
+/* Update existing online dot */
+.online-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: #42b883;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.online-dot.offline {
+    background: #8a8d91;
+}
+
+/* User Activity Status trong Header Dropdown */
+.dropdown-menu .conversation-item .user-activity-status {
+    font-size: 10px;
+    margin-top: 2px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.dropdown-menu .conversation-item .user-activity-status.online {
+    background: rgba(0, 210, 106, 0.15);
+    color: #00a855;
+    font-weight: 600;
+}
+
+.dropdown-menu .conversation-item .user-activity-status.offline {
+    background: rgba(138, 141, 145, 0.1);
+    color: #8a8d91;
+}
+
+/* Online dot improvements */
+.conversation-item .online-dot {
+    width: 14px;
+    height: 14px;
+    background: #00d26a;
+    border: 3px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.conversation-item .online-dot.offline {
+    background: #8a8d91;
+}
 @media (max-width: 576px) {
     .navbar {
         padding: 0 5px;

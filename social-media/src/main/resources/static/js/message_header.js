@@ -133,12 +133,17 @@ class MessageDropdown {
             ? `${friend.lastMessage} • ${friend.timeAgo || ''}`
             : 'Chưa có tin nhắn • Vừa tạo';
         const spanStyle = friend.unreadCount && friend.unreadCount > 0 ? '' : 'display: none;';
+
+        // Hiển thị trạng thái activity với màu sắc rõ ràng
+        const onlineClass = friend.isOnline || friend.online ? 'online' : 'offline';
+        const activityText = friend.isOnline || friend.online ? 'Đang hoạt động' : 'Không hoạt động';
+
         return `
         <div class="conversation-item" 
              onclick="messageDropdown.openChat('${friend.id}', '${nameEsc}', '${avatar}', '${type}')">
             <div style="position: relative;">
                 <img src="${avatar}" alt="Avatar" class="conversation-avatar">
-                ${friend.isOnline || friend.online ? '<div class="online-dot"></div>' : ''}
+                <div class="online-dot ${onlineClass}"></div>
             </div>
             <div class="conversation-info">
                 <div class="conversation-name d-flex justify-content-between align-items-center">
@@ -148,6 +153,10 @@ class MessageDropdown {
                       </span>
                 </div>
                 <div class="conversation-preview">${preview}</div>
+                <div class="user-activity-status ${onlineClass}">
+                    <span class="activity-dot"></span>
+                    <span>${activityText}</span>
+                </div>
             </div>
         </div>
     `;

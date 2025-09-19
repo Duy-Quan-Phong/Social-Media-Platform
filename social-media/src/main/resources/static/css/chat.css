@@ -370,3 +370,33 @@ emoji-picker {
     font-size: 16px;
     font-weight: bold;
 }
+/* Chat Header Activity Status */
+.chat-user .meta .sub {
+    font-size: 12px;
+    opacity: .9;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chat-user .meta .sub.online {
+    color: #42b883;
+}
+
+.chat-user .meta .sub.online::before {
+    content: '•';
+    color: #42b883;
+    font-weight: bold;
+    margin-right: 2px;
+}
+
+.chat-user .meta .sub.offline {
+    color: #8a8d91;
+}
+
+.chat-user .meta .sub.offline::before {
+    content: '•';
+    color: #8a8d91;
+    font-weight: bold;
+    margin-right: 2px;
+}
