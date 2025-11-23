@@ -35,8 +35,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
+@RequestMapping("/") //duong dẫn gốc (home)
 public class UserController {
     @Autowired
     private PostService postService;
@@ -48,6 +50,60 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    // them quen mat khau
+    @GetMapping("/forgot-password")
+    public String showForgotPasswordForm(){
+        return "forgotpassword/forgot_password";
+    }
+
+    @PostMapping("/forgot-password")
+    public String processForgotPassword(@RequestParam("email") String email, RedirectAttributes redirectAttributes){
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            redirectAttributes.addFlashAttribute("error", "tai khoan va dia chi email nay khong duoc tim thay.");
+            return "redirect:/forgot-password";
+        }
+        String token = UUID.randomUUID().toString();
+        userService.cretePasswordResetTokenForUser(user, token);
+        redirectAttributes.addFlashAttribute("message", "yêu cẩu tin nhắn đã được gửi tới hộp thư của bạn vui lòng check mail!");
+        return "redirect:/forgot-password";
+    }
+
+    @GetMapping("/reset-password")
+    public String showResetPasswordForm(@RequestParam("token") String token,Model model,RedirectAttributes redirectAttributes){
+        User user = userService.findUserByPasswordResetToken(token);
+        if (user == null) {
+            redirectAttributes.addFlashAttribute("error","Link hết hạn");
+            return "redirect:/login";
+        }
+        model.addAttribute("token", token);
+        model.addAttribute("user", user);
+        return "forgotpassword/reset_password";
+    }
+
+    @PostMapping("/reset-password")
+    public String processResetPassword(@RequestParam("token") String token,
+                                       @RequestParam("password") String newPassword,
+                                       @RequestParam("confirmPassword") String confirmPassword,
+                                       RedirectAttributes redirectAttributes) {
+        if (!newPassword.equals(confirmPassword)){
+            redirectAttributes.addFlashAttribute("error","mật khẩu mới và xác nhận mật khẩu không giống.");
+            return "redirect:/reset-password?token" + token;
+
+        }
+
+        User user = userService.findUserByPasswordResetToken(token);
+        if (user == null) {
+            redirectAttributes.addFlashAttribute("error", "liên kết hết hạn or không hợp lệ");
+            return "redirect:/login";
+        }
+
+        userService.changeUserPassword(user, newPassword);
+
+        redirectAttributes.addFlashAttribute("message", "Đặt lại mật khẫu thành công.");
+        return "redirect:/login";
+    }
 
     @Autowired
     private FriendshipService friendshipService;

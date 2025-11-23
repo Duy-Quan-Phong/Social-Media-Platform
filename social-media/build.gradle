@@ -56,9 +56,12 @@ dependencies {
     implementation 'org.webjars:sockjs-client:1.5.1'
     implementation 'org.webjars:stomp-websocket:2.3.4'
     implementation 'org.springframework:spring-messaging'
-
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+
+
