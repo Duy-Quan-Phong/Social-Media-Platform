@@ -149,4 +149,50 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "     OR p.user = :viewer)")
     List<String> findVisiblePhotos(@Param("profileOwner") User profileOwner,
                                    @Param("viewer") User viewer);
+
+    // --- THÊM ĐOẠN NÀY VÀO ---
+
+    @Query(value = """
+        SELECT p.* FROM posts p
+        JOIN post_hashtags ph ON p.id = ph.post_id
+        JOIN hashtags h ON ph.hashtag_id = h.id
+        WHERE h.name = :tagName
+          AND p.is_deleted = FALSE
+          AND (
+               p.privacy_level = 'PUBLIC'
+            OR (p.privacy_level = 'FRIENDS' AND 
+                EXISTS (
+                    SELECT 1 FROM friendships f 
+                    WHERE f.status = 'ACCEPTED'
+                      AND ((f.requester_id = :currentUser AND f.addressee_id = p.user_id)
+                        OR (f.addressee_id = :currentUser AND f.requester_id = p.user_id))
+                )
+            )
+            OR (p.user_id = :currentUser)
+          )
+        ORDER BY p.created_at DESC
+    """,
+            countQuery = """
+        SELECT count(*) FROM posts p
+        JOIN post_hashtags ph ON p.id = ph.post_id
+        JOIN hashtags h ON ph.hashtag_id = h.id
+        WHERE h.name = :tagName
+          AND p.is_deleted = FALSE
+          AND (
+               p.privacy_level = 'PUBLIC'
+            OR (p.privacy_level = 'FRIENDS' AND 
+                EXISTS (
+                    SELECT 1 FROM friendships f 
+                    WHERE f.status = 'ACCEPTED'
+                      AND ((f.requester_id = :currentUser AND f.addressee_id = p.user_id)
+                        OR (f.addressee_id = :currentUser AND f.requester_id = p.user_id))
+                )
+            )
+            OR (p.user_id = :currentUser)
+          )
+    """,
+            nativeQuery = true)
+    Page<Post> findPostsByHashtag(@Param("tagName") String tagName,
+                                  @Param("currentUser") Long currentUser,
+                                  Pageable pageable);
 }

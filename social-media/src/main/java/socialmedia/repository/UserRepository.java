@@ -82,4 +82,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<User> searchUsers(@Param("keyword") String keyword);
+
+    // Tìm những người dùng đã từng đăng bài có chứa hashtag này
+    // (Sắp xếp theo số lượng bài viết họ đã đăng về chủ đề đó -> Ai đăng nhiều hiện đầu)
+    @Query(value = """
+        SELECT u.*, COUNT(p.id) as post_count 
+        FROM users u
+        JOIN posts p ON u.id = p.user_id
+        JOIN post_hashtags ph ON p.id = ph.post_id
+        JOIN hashtags h ON ph.hashtag_id = h.id
+        WHERE h.name = :hashtag
+        GROUP BY u.id
+        ORDER BY post_count DESC
+    """, nativeQuery = true)
+    List<User> findUsersByHashtagUsage(@Param("hashtag") String hashtag);
 }

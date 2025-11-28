@@ -369,4 +369,19 @@ public class PostServiceImpl implements PostService {
             e.printStackTrace();
         }
     }
+    // --- HÀM TÌM KIẾM HASHTAG (Bổ sung để hết lỗi) ---
+    @Override
+    public Page<PostDisplayDto> searchPostsByHashtag(String hashtag, User currentUser, Pageable pageable) {
+        // 1. Làm sạch từ khóa (Bỏ dấu # nếu có)
+        String cleanTag = hashtag.replace("#", "").trim().toLowerCase();
+
+        // 2. Gọi Repository để tìm bài viết
+        // (Lưu ý: currentUserId cần xử lý null nếu user chưa đăng nhập, nhưng ở controller ta đã bắt buộc đăng nhập rồi)
+        Long currentUserId = (currentUser != null) ? currentUser.getId() : null;
+
+        Page<Post> posts = postRepository.findPostsByHashtag(cleanTag, currentUserId, pageable);
+
+        // 3. Convert sang DTO để hiển thị
+        return posts.map(post -> convertToDisplayDto(post, currentUser));
+    }
 }

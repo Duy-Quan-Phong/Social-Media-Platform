@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả tìm kiếm</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/news-feed.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .search-sidebar {
+            position: sticky;
+            top: 80px;
+        }
+        .search-card:hover {
+            background-color: #f0f2f5;
+        }
+        .highlight-text {
+            color: #1877f2;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 search-sidebar">
+                <div class="card-header bg-white border-bottom-0 pt-3">
+                    <h5 class="mb-0 fw-bold">Kết quả tìm kiếm</h5>
+                    <div class="text-muted small mt-1">Bộ lọc</div>
+                </div>
+                <div class="list-group list-group-flush p-2">
+                    <a th:href="@{/search(q=${keyword}, type='posts')}"
+                       th:class="'list-group-item list-group-item-action rounded mb-1 border-0 ' + (${type == 'posts'} ? 'active bg-primary-subtle text-primary fw-bold' : '')">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center"
+                                 th:classappend="${type == 'posts'} ? 'bg-primary text-white' : 'bg-light text-dark'"
+                                 style="width: 36px; height: 36px;">
+                                <i class="fas fa-newspaper"></i>
+                            </div>
+                            <span>Bài viết</span>
+                        </div>
+                    </a>
+
+                    <a th:href="@{/search(q=${keyword}, type='people')}"
+                       th:class="'list-group-item list-group-item-action rounded border-0 ' + (${type == 'people'} ? 'active bg-primary-subtle text-primary fw-bold' : '')">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center"
+                                 th:classappend="${type == 'people'} ? 'bg-primary text-white' : 'bg-light text-dark'"
+                                 style="width: 36px; height: 36px;">
+                                <i class="fas fa-user-group"></i>
+                            </div>
+                            <span>Mọi người</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+
+            <div th:if="${type == 'posts'}">
+                <div th:if="${#lists.isEmpty(posts)}" class="text-center py-5">
+                    <img th:src="@{/images/no-results.svg}" width="150" class="mb-3 opacity-50" onerror="this.style.display='none'">
+                    <h5 class="text-muted">Không tìm thấy bài viết nào cho <span class="highlight-text" th:text="'#' + ${keyword}"></span></h5>
+                </div>
+
+                <div th:each="post : ${posts}" class="card mb-3 shadow-sm border-0">
+                    <div class="card-header bg-white border-0 pt-3 pb-0 d-flex align-items-center">
+                        <img th:src="${post.userAvatarUrl != null ? post.userAvatarUrl : '/images/default-avatar.jpg'}"
+                             class="rounded-circle me-2" width="40" height="40" style="object-fit: cover">
+                        <div>
+                            <h6 class="mb-0 fw-bold">
+                                <a th:href="@{'/profile/' + ${post.username}}" class="text-decoration-none text-dark" th:text="${post.userFullName}">Name</a>
+                            </h6>
+                            <small class="text-muted">
+                                <i class="far fa-clock me-1"></i>Vừa xong
+                                <i class="fas fa-globe-americas ms-1" th:if="${post.privacyLevel == 'PUBLIC'}"></i>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text post-content" th:text="${post.content}"></p>
+
+                        <div th:if="${post.imageUrls != null and not #strings.isEmpty(post.imageUrls) and post.imageUrls != '[]'}">
+                            <div class="mt-2 rounded overflow-hidden border">
+                                <img src="/images/placeholder-image.jpg" class="w-100" style="max-height: 400px; object-fit: cover;">
+                                <small class="text-muted p-2 d-block bg-light">
+                                    <i class="fas fa-image"></i> Bài viết có đính kèm ảnh/video
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top py-2">
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span><i class="fas fa-thumbs-up text-primary"></i> <span th:text="${post.likesCount}">0</span></span>
+                            <span><span th:text="${post.commentsCount}">0</span> bình luận</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${type == 'people'}">
+                <div th:if="${#lists.isEmpty(people)}" class="text-center py-5">
+                    <h5 class="text-muted">Không tìm thấy ai liên quan đến <span class="highlight-text" th:text="${keyword}"></span></h5>
+                </div>
+
+                <div class="list-group shadow-sm">
+                    <div th:each="user : ${people}" class="list-group-item border-0 p-3 search-card d-flex align-items-center">
+                        <a th:href="@{'/profile/' + ${user.username}}">
+                            <img th:src="${user.profilePicture != null ? user.profilePicture : '/images/default-avatar.jpg'}"
+                                 class="rounded-circle me-3" width="60" height="60" style="object-fit: cover">
+                        </a>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 fw-bold">
+                                <a th:href="@{'/profile/' + ${user.username}}" class="text-decoration-none text-dark"
+                                   th:text="${user.lastName + ' ' + user.firstName}">Name</a>
+                            </h6>
+                            <small class="text-muted">
+                                <i class="fas fa-pen-nib me-1"></i> Đã đăng bài viết về
+                                <span class="fw-bold text-primary" th:text="'#' + ${keyword}"></span>
+                            </small>
+                        </div>
+                        <button class="btn btn-secondary btn-sm bg-light text-dark border-0"
+                                th:onclick="'sendFriendRequest(' + ${user.id} + ')'">
+                            <i class="fas fa-user-plus"></i> Thêm bạn
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/chat-fragment :: chatContainers"></div>
+
+<script>
+    function sendFriendRequest(userId) {
+        $.post("/api/friends/request/" + userId, function() {
+            alert("Đã gửi lời mời kết bạn!");
+        }).fail(function() {
+            alert("Lỗi hoặc đã gửi rồi.");
+        });
+    }
+</script>
+
+</body>
+</html>

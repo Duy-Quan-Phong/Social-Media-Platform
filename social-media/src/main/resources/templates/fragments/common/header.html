@@ -17,10 +17,34 @@
                 <a class="navbar-brand me-2 logo" th:href="@{/news-feed}">
                     <img th:src="@{/images/2023_Facebook_icon.svg.webp}" alt="Facebook" height="42">
                 </a>
-                <form class="d-none d-md-block" role="search">
-                    <input class="form-control form-control-sm" type="search" placeholder="Tìm kiếm..."
-                           aria-label="Search">
-                </form>
+                <div class="d-none d-md-block position-relative" style="width: 240px;">
+                    <input id="globalSearchInput"
+                           class="form-control form-control-sm rounded-pill ps-4 bg-light border-0"
+                           type="search"
+                           placeholder="Tìm kiếm trên Facebook"
+                           aria-label="Search"
+                           style="height: 40px;">
+                    <i class="fas fa-search position-absolute text-muted"
+                       style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px;"></i>
+                </div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const searchInput = document.getElementById("globalSearchInput");
+                        if (searchInput) {
+                            searchInput.addEventListener("keypress", function(event) {
+                                if (event.key === "Enter") {
+                                    event.preventDefault(); // Chặn reload form
+                                    const keyword = searchInput.value.trim();
+                                    if (keyword) {
+                                        // Chuyển hướng sang trang tìm kiếm + encode từ khóa
+                                        window.location.href = `/search?q=${encodeURIComponent(keyword)}&type=posts`;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                </script>
             </div>
 
             <!-- CENTER: Navigation icons -->
