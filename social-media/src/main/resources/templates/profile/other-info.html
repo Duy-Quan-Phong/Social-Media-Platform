@@ -1,0 +1,129 @@
+<div th:fragment="content">
+    <!-- Privacy Options -->
+    <div class="privacy-grid">
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-eye"></i>
+                Hiển thị hồ sơ
+            </label>
+            <select class="form-control" th:field="*{showProfile}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PUBLIC</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-users"></i>
+                Danh sách bạn bè
+            </label>
+            <select class="form-control" th:field="*{showFriendList}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PUBLIC</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-id-card"></i>
+                Tên đầy đủ
+            </label>
+            <select class="form-control" th:field="*{showFullName}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PUBLIC</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-phone"></i>
+                Số điện thoại
+            </label>
+            <select class="form-control" th:field="*{showPhone}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PRIVATE</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-envelope"></i>
+                Địa chỉ email
+            </label>
+            <select class="form-control" th:field="*{showEmail}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PRIVATE</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-user-circle"></i>
+                Ảnh đại diện
+            </label>
+            <select class="form-control" th:field="*{showAvatar}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PUBLIC</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-info-circle"></i>
+                Thông tin cá nhân
+            </label>
+            <select class="form-control" th:field="*{showBio}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PUBLIC</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-birthday-cake"></i>
+                Ngày sinh
+            </label>
+            <select class="form-control" th:field="*{showDob}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">PRIVATE</option>
+            </select>
+        </div>
+
+        <div class="privacy-item">
+            <label>
+                <i class="fas fa-comments"></i>
+                Nhận tin nhắn
+            </label>
+            <select class="form-control" th:field="*{allowSendMessage}">
+                <option th:each="level : ${privacyLevels}" th:value="${level}" th:text="${level.displayName}">FRIENDS</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Additional Settings -->
+    <div class="checkbox-group">
+        <div class="checkbox-item">
+            <input type="checkbox" th:field="*{allowSearchByEmail}" id="allowSearchByEmail">
+            <label for="allowSearchByEmail">
+                <i class="fas fa-search"></i>
+                Cho phép tìm kiếm qua email
+            </label>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" th:field="*{allowSearchByPhone}" id="allowSearchByPhone">
+            <label for="allowSearchByPhone">
+                <i class="fas fa-mobile-alt"></i>
+                Cho phép tìm kiếm qua SĐT
+            </label>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" th:field="*{allowFriendRequests}" id="allowFriendRequests">
+            <label for="allowFriendRequests">
+                <i class="fas fa-user-plus"></i>
+                Cho phép lời mời kết bạn
+            </label>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" th:field="*{canBeFound}" id="canBeFound">
+            <label for="canBeFound">
+                <i class="fas fa-globe"></i>
+                Hiện tài khoản trong tìm kiếm
+            </label>
+        </div>
+    </div>
+</div>

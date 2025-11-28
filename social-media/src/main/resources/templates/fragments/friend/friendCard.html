@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+</head>
+<body>
+<th:block th:fragment="friendCard(friend, nameClass)">
+    <a th:href="@{/profile/{username}(username=${friend.username})}"
+       class="friend-card mt-2 mb-2 justify-content-center d-flex ">
+            <img class="mb-3" th:src="${friend.avatarUrl} ?: '/images/default-avatar.jpg'" alt="Avatar"/>
+            <div class="friend-info">
+                <h5 th:class="${nameClass}"
+                    th:title="${friend.fullName}"
+                    th:text="${friend.fullName}">Tên người dùng</h5>
+                <h7 th:text="${friend.getMutualFriends()} + ' bạn chung'">0 bạn chung</h7>
+            </div>
+    </a>
+</th:block>
+</body>
+</html>

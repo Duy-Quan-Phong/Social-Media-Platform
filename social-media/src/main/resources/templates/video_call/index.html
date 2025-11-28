@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calling Indicator</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/call.css}">
+</head>
+
+<body>
+<video  th:if="${participantsCount == 2}"  class="localVideo" autoplay playsinline muted></video>
+<video th:if="${participantsCount == 2}" id="remoteVideo" autoplay playsinline></video>
+<div th:if="${participantsCount > 2}" id="remoteVideosContainer" >
+    <video  class="localVideo" autoplay playsinline muted></video>
+</div>
+<div class="container">
+    <div class="profile">
+        <img th:src="${remoteAvatar}"
+             alt="Caller" class="avatar">
+        <h1 th:text="${remoteName}">User Name</h1>
+    </div>
+</div>
+<div th:if="${!isIncoming}" class="pulse-container">
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+    <div class="circle circle-3"></div>
+    <div class="circle circle-4">
+        <i class="fas fa-phone"></i>
+    </div>
+</div>
+
+<div class="button-group">
+    <div class="action-buttons">
+        <button class="btn toggle-mic" title="Mute">
+            <i class="fas fa-microphone"></i>
+        </button>
+
+        <button class="btn end-call" th:title="${!isIncoming ? 'End Call' : 'Reject'}">
+            <i class="fas fa-phone-slash"></i>
+        </button>
+
+        <button th:if="${isIncoming}" class="btn accept" title="Accept">
+            <i class="fas fa-phone"></i>
+        </button>
+
+        <button class="btn toggle-camera" title="Camera">
+            <i class="fas fa-video"></i>
+        </button>
+
+    </div>
+    <p class="timer" id="timer">00:00</p>
+</div>
+
+
+<audio id="ringtone" loop>
+    <source src="/images/call_gui.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="ringtoneIncoming" loop>
+    <source src="/images/call_nhan.mp3" type="audio/mpeg">
+</audio>
+
+<script th:inline="javascript">
+    const conversation_Id = /*[[${conversationId}]]*/ 0;
+    const currentUserId = /*[[${userId}]]*/ 0;
+    const participantsCount = /*[[${participantsCount}]]*/ 2;
+    const isCaller = /*[[${isCaller}]]*/ false;
+    const isIncoming = /*[[${isIncoming}]]*/ false;
+</script>
+<script th:src="@{/js/video_call.js}"></script>
+
+</body>
+
+</html>

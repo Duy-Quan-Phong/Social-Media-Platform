@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/profile.css}">
+    <link rel="stylesheet" th:href="@{/css/button.css}">
+    <link rel="stylesheet" th:href="@{/css/modern-settings.css}">
+</head>
+<body onload="showSectionFromServer()">
+
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="settings-container">
+    <!-- Header -->
+    <div class="settings-header">
+        <h1>
+            <i class="fas fa-cog"></i>
+            Cài đặt
+        </h1>
+        <p>Quản lý thông tin cá nhân, bảo mật và quyền riêng tư của bạn</p>
+    </div>
+
+    <!-- Alerts -->
+    <div th:if="${error != null}" class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span th:text="${error}"></span>
+    </div>
+    <div th:if="${success != null}" class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span th:text="${success}"></span>
+    </div>
+
+    <!-- Tabs Container -->
+    <div class="settings-tabs">
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="showSection('general')" data-section="general">
+                <i class="fas fa-user"></i>
+                Thông tin chung
+            </button>
+            <button class="tab-button" onclick="showSection('password')" data-section="password">
+                <i class="fas fa-lock"></i>
+                Mật khẩu
+            </button>
+            <button class="tab-button" onclick="showSection('other')" data-section="other">
+                <i class="fas fa-shield-alt"></i>
+                Quyền riêng tư
+            </button>
+        </div>
+
+        <!-- General Info Tab -->
+        <div id="section-general" class="tab-content active">
+            <h2 class="section-title">
+                <i class="fas fa-user-edit"></i>
+                Thông tin cá nhân
+            </h2>
+            <div class="section-subtitle">
+                Cập nhật thông tin cơ bản và ảnh đại diện của bạn
+            </div>
+
+            <form th:action="@{/setting}" th:object="${user}" method="post" enctype="multipart/form-data">
+                <input type="hidden" th:field="*{id}">
+                <div th:replace="profile/general-info :: content"></div>
+                <div class="submit-section">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i>
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Password Tab -->
+        <div id="section-password" class="tab-content" th:if="${passwordDto != null}">
+            <h2 class="section-title">
+                <i class="fas fa-key"></i>
+                Đổi mật khẩu
+            </h2>
+            <div class="section-subtitle">
+                Cập nhật mật khẩu để bảo mật tài khoản của bạn
+            </div>
+
+            <form th:action="@{/setting/change-password}" th:object="${passwordDto}" method="post">
+                <div th:replace="profile/change-password :: content"></div>
+                <div class="submit-section">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-shield-alt"></i>
+                        Cập nhật mật khẩu
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Privacy Tab -->
+        <div id="section-other" class="tab-content">
+            <h2 class="section-title">
+                <i class="fas fa-user-shield"></i>
+                Cài đặt quyền riêng tư
+            </h2>
+            <div class="section-subtitle">
+                Kiểm soát ai có thể xem và tương tác với thông tin của bạn
+            </div>
+
+            <form th:action="@{/setting/privacy}" th:object="${privacySettings}" method="post">
+                <input type="hidden" th:field="*{id}">
+                <input type="hidden" th:field="*{user}">
+                <div th:replace="profile/other-info :: content"></div>
+                <div class="submit-section">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i>
+                        Lưu cài đặt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/chat-fragment :: chatContainers"></div>
+
+<script th:inline="javascript">
+    function showSection(sectionName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Remove active class from all buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const selectedTab = document.getElementById('section-' + sectionName);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+
+        // Add active class to clicked button
+        const selectedButton = document.querySelector(`[data-section="${sectionName}"]`);
+        if (selectedButton) {
+            selectedButton.classList.add('active');
+        }
+    }
+
+    function showSectionFromServer() {
+        const activeTab = /*[[${activeTab} ?: 'general']]*/ 'general';
+        showSection(activeTab);
+    }
+
+    function showPreview(event) {
+        const fileInput = event.target;
+        const file = fileInput.files[0];
+        const previewImg = document.querySelector(".avatar-preview");
+
+        if (file && previewImg) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                previewImg.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+</script>
+
+</body>
+</html>

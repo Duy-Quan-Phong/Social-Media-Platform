@@ -1,0 +1,302 @@
+<header th:fragment="header"
+        xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/chat.css}">
+
+    <style>
+        .no-caret::after {
+            display: none !important;
+        }
+    </style>
+
+    <nav class="navbar navbar-expand-lg shadow-sm">
+        <div class="container-fluid d-flex justify-content-between align-items-center px-3">
+            <!-- LEFT: Logo + Search -->
+            <div class="d-flex align-items-center" style="gap: 10px;">
+                <a class="navbar-brand me-2 logo" th:href="@{/news-feed}">
+                    <img th:src="@{/images/2023_Facebook_icon.svg.webp}" alt="Facebook" height="42">
+                </a>
+                <form class="d-none d-md-block" role="search">
+                    <input class="form-control form-control-sm" type="search" placeholder="Tìm kiếm..."
+                           aria-label="Search">
+                </form>
+            </div>
+
+            <!-- CENTER: Navigation icons -->
+            <div class="d-none d-lg-flex justify-content-center align-items-center flex-grow-1 navigation-center ">
+                <a class="nav-link nav-icon nav-icon-wrapper" th:href="@{/news-feed}"
+                   title="Trang chủ" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                    <i class="fas fa-home"></i>
+                </a>
+                <a class="nav-link nav-icon nav-icon-wrapper" th:href="@{/friends}"
+                   title="Bạn bè" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                    <i class="fas fa-user-friends"></i>
+                </a>
+                <a class="nav-link nav-icon nav-icon-wrapper developing" href="#"
+                   title="Marketplace" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                    <i class="fas fa-store"></i>
+                </a>
+                <a class="nav-link nav-icon nav-icon-wrapper developing" href="#"
+                   title="Nhóm" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                    <i class="fas fa-users"></i>
+                </a>
+            </div>
+
+            <!-- RIGHT: Messages, Notifications, User -->
+            <div class="d-flex align-items-center gap-3">
+                <!-- Menu Dropdown -->
+                <div class="dropdown">
+                    <a id="menuDropdown"
+                       class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
+                       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                       title="Menu" style="text-decoration: none; color: white">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-bars menu-icon"></i>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" id="menuList"
+                        aria-labelledby="menuDropdown" style="max-height: 300px; overflow-y: auto; width: 400px;">
+                        <li><a href="/news-feed" class="nav-item body-item"><i class="fas fa-home"></i> <span>Home</span></a></li>
+                        <li><a href="/friends" class="nav-item body-item"><i class="fas fa-user-friends"></i> <span>Bạn bè</span></a></li>
+                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-users"></i> <span>Nhóm</span></a></li>
+                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-history"></i> <span>Kỷ niệm</span></a></li>
+                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-bookmark"></i> <span>Đã lưu</span></a></li>
+                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-video"></i> <span>Video</span></a></li>
+                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-store"></i> <span>Marketplace</span></a></li>
+                    </ul>
+                </div>
+
+                <!-- Messages Icon -->
+                <div class="nav-icon-wrapper position-relative" id="messageIcon"
+                     data-bs-toggle="tooltip" data-bs-placement="bottom" title="Tin nhắn">
+                    <i class="fas fa-comment-dots fa-lg nav-icon"></i>
+                    <span id="messageBadge"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                          style="font-size: 0.7rem; display: none;">0</span>
+                    <div class="message-dropdown" id="messageDropdown">
+                        <div class="dropdown-header"><h5 class="dropdown-title">Tin nhắn</h5></div>
+                        <div class="conversation-list" id="conversationListHeader">
+                            <div class="loading-state"><i class="fas fa-spinner fa-spin"></i><div>Đang tải...</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Dropdown -->
+                <div class="dropdown">
+                    <a id="notificationDropdown"
+                       class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
+                       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                       data-bs-placement="bottom" title="Thông báo"
+                       style="text-decoration: none; color: white">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-bell fa-lg"></i>
+                            <span id="notificationCount" class="badge bg-danger"
+                                  style="font-size: 0.7rem; position: absolute; top: -10px; right: -10px">0</span>
+                        </div>
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end p-2" id="notificationList"
+                        aria-labelledby="notificationDropdown" style="max-height: 300px; overflow-y: auto; width: 400px;">
+                    </ul>
+                </div>
+
+                <!-- User Dropdown -->
+                <div class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                    <a class="nav-link dropdown-toggle p-0 d-flex align-items-center" href="#" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                             th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
+                             class="rounded-circle nav-icon-wrapper"/>
+                        <img th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                             th:src="@{/images/default-avatar.jpg}" alt="Avatar"
+                             class="rounded-circle nav-icon-wrapper"/>
+                    </a>
+                    <ul style="width: 350px" class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center"
+                               th:href="@{|/profile/${#authentication.principal.username}|}">
+                                <img th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
+                                     class="rounded-circle nav-icon-wrapper"/>
+                                <span class="ms-2" th:text="${#authentication.principal.getFullName()}"></span>
+                            </a>
+                        </li>
+                        <li><a class="dropdown-item" th:href="@{/setting}"><i class="fas fa-cog icon"></i> Cài đặt</a></li>
+                        <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
+                            <a class="dropdown-item" th:href="@{/admin/dashboard}"><i class="fas fa-user-shield icon"></i> Trang admin</a>
+                        </li>
+                        <hr class="dropdown-divider">
+                        <li>
+                            <form th:action="@{/logout}" method="post" style="margin: 0;">
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="fas fa-sign-out-alt icon"></i> Đăng xuất
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Login Icon -->
+                <div class="nav-item nav-icon-wrapper" sec:authorize="!isAuthenticated()"
+                     data-bs-toggle="tooltip" data-bs-placement="bottom" title="Đăng nhập">
+                    <a class="nav-icon" th:href="@{/login}">
+                        <i class="fas fa-sign-in-alt fa-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Modal Tạo nhóm -->
+    <div data-bs-backdrop="false" class="modal fade" id="createGroupModal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tạo nhóm mới</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Tên nhóm</label>
+                    <input id="cg-name" class="form-control mb-3" placeholder="Nhóm của tôi" value="Nhóm mới">
+                    <label class="form-label">Thêm thành viên</label>
+                    <input id="cg-search" class="form-control mb-2" placeholder="Gõ tên để tìm..."
+                           oninput="searchUsersForGroup(this.value)">
+                    <div id="cg-results" class="border rounded p-2 mb-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="text-muted text-center">Gõ tên để tìm bạn bè...</div>
+                    </div>
+                    <div id="cg-selected-list" class="border rounded p-2 mb-3"
+                         style="max-height: 200px; overflow-y: auto;"></div>
+                    <div class="small text-muted">Đã chọn: <span id="cg-picked">0</span> người</div>
+                    <label class="form-label mt-3">Ảnh nhóm (tuỳ chọn)</label>
+                    <input id="cg-avatar" type="file" accept="image/*" class="form-control">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button id="cg-create" class="btn btn-primary" onclick="createGroup()">Tạo nhóm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const currentUserId = /*[[${#authentication.principal.id}]]*/ null;
+        /*]]>*/
+    </script>
+    <script>
+        function activateNavLinks() {
+            const navLinks = document.querySelectorAll(".nav-link");
+            const currentPath = window.location.pathname;
+            navLinks.forEach(link => {
+                const href = link.getAttribute("href");
+                if (href && currentPath.startsWith(href)) link.classList.add("active");
+                else link.classList.remove("active");
+            });
+        }
+
+    </script>
+    <script type="module" th:src="@{/js/chat.js}"></script>
+    <script type="module" th:src="@{/js/notification.js}"></script>
+    <script th:src="@{/js/message_header.js}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            activateNavLinks();
+            // Khởi tạo tooltip cho tất cả elements có title
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+            tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el, {
+                    placement: 'bottom',          // luôn nằm dưới
+                    fallbackPlacements: []  ,
+                    trigger: 'hover'
+                });
+            });
+
+            const messageIcon = document.getElementById('messageIcon');
+            const messageDropdown = document.getElementById('messageDropdown');
+
+            const BOOTSTRAP_TOGGLE_SELECTOR = '[data-bs-toggle="dropdown"], .dropdown-toggle';
+
+            const getBootstrapToggles = () => Array.from(document.querySelectorAll(BOOTSTRAP_TOGGLE_SELECTOR));
+
+            function closeAllDropdowns(except = null) {
+                // 1) đóng tất cả Bootstrap dropdown (trừ except nếu except thuộc cùng .dropdown)
+                getBootstrapToggles().forEach(toggle => {
+                    try {
+                        // nếu except nằm trong cùng .dropdown với toggle thì skip
+                        if (except && except.closest && toggle.closest && except.closest('.dropdown') === toggle.closest('.dropdown')) {
+                            return;
+                        }
+                        // nếu except chính là toggle thì skip
+                        if (toggle === except) return;
+
+                        // hide nếu có instance (dùng getOrCreateInstance an toàn)
+                        const inst = bootstrap.Dropdown.getOrCreateInstance(toggle);
+                        inst.hide();
+                    } catch (err) {
+                        // ignore errors from bootstrap if any toggle isn't standard
+                        // console.debug(err);
+                    }
+                });
+
+                // 2) đóng custom messageDropdown (trừ khi except là messageIcon hoặc messageDropdown)
+                if (messageDropdown) {
+                    const keepOpen = except === messageDropdown || except === messageIcon
+                        || (except && except.closest && except.closest('#messageIcon'));
+                    if (!keepOpen && messageDropdown.classList.contains('show')) {
+                        messageDropdown.classList.remove('show');
+                    }
+                }
+            }
+
+            // Khi một Bootstrap dropdown sắp mở -> đóng hết dropdown khác trước (giữ lại dropdown đang mở)
+            document.addEventListener('show.bs.dropdown', (ev) => {
+                // ev.target thường là phần tử toggle (button/a)
+                const toggle = ev.target;
+                // đóng tất cả khác, để dropdown này mở bình thường
+                closeAllDropdowns(toggle);
+            });
+
+            // Xử lý toggle cho messageIcon (custom dropdown)
+            if (messageIcon) {
+                messageIcon.addEventListener('click', (e) => {
+                    e.stopPropagation(); // ngăn click bubble ra document (để không bị đóng ngay)
+                    const isOpen = messageDropdown && messageDropdown.classList.contains('show');
+
+                    // đóng các dropdown bootstrap khác (với except = messageIcon để giữ chat nếu cần)
+                    closeAllDropdowns(messageIcon);
+
+                    // toggle custom dropdown
+                    if (messageDropdown) messageDropdown.classList.toggle('show', !isOpen);
+                });
+            }
+
+            // Click ngoài -> đóng tất cả
+            document.addEventListener('click', (e) => {
+                // nếu click nằm trong một dropdown bootstrap hoặc trong messageIcon/messageDropdown thì không đóng
+                if (e.target.closest('.dropdown') || e.target.closest('#messageIcon') || e.target.closest('#messageDropdown')) {
+                    return;
+                }
+                closeAllDropdowns();
+            });
+
+            // ESC để đóng
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.key === 'Esc') closeAllDropdowns();
+            });
+
+            document.querySelectorAll('.developing').forEach(item => {
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Đang phát triển',
+                        text: 'Tính năng này hiện đang được phát triển. Vui lòng quay lại sau!',
+                        confirmButtonText: 'OK'
+                    });
+                });
+            });
+
+        });
+    </script>
+
+</header>

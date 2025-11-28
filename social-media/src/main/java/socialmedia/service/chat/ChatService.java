@@ -1,0 +1,29 @@
+package socialmedia.service.chat;
+
+import socialmedia.dto.chat.ConversationDto;
+import socialmedia.dto.chat.MessageDto;
+import socialmedia.dto.chat.SendMessageRequest;
+import socialmedia.dto.chat.UserSearchDto;
+import socialmedia.model.account.User;
+import socialmedia.model.conversation.Conversation;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+public interface ChatService {
+    List<ConversationDto> getConversationsForUser(Long userId);
+    List<MessageDto> getChatHistory(Long userId1, Long userId2);
+    MessageDto sendMessage(Long senderId, SendMessageRequest request);
+    List<ConversationDto> getOnlineFriends(Long userId);
+    Conversation createGroupConversation(User creator, List<User> participants, String groupName);
+    ConversationDto findOrCreatePrivateConversation(Long currentUserId, Long targetUserId);
+    List<MessageDto> getMessagesByConversation(Long conversationId, int page, int size);
+    List<ConversationDto.ParticipantDto> getParticipants(Long conversationId);
+    ConversationDto createGroupFromIds(Long creatorId, List<Long> participantIds, String groupName);
+    String updateGroupAvatar(Long conversationId, MultipartFile file);
+    Long getTotalUnread(Long userId);
+    Long getUnreadCount(Long conversationId, Long userId);
+    void markAsRead(Long conversationId, Long userId);
+    List<UserSearchDto> searchUsers(String keyword, Long currentUserId);
+    List<ConversationDto> getGroupsForUser(Long userId);
+}

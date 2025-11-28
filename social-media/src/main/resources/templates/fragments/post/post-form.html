@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head></head>
+<body>
+<div th:fragment="create-post-form">
+    <div class="post-creator" sec:authorize="isAuthenticated()">
+        <h3 class="post-title">
+            <i class="fas fa-pen"></i> Bạn đang nghĩ gì?
+        </h3>
+        <form method="post" th:action="@{/posts/create}" id="create-post-form" enctype="multipart/form-data">
+            <input type="hidden" name="redirectUrl" id="redirectUrl"/>
+            <script>
+                document.getElementById("redirectUrl").value = window.location.pathname;
+            </script>
+            <div class="post-creator-header">
+                <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                     th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
+                     class="creator-avatar">
+                <img th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                     th:src="@{/images/default-avatar.jpg}" alt="Avatar"
+                     class="creator-avatar">
+
+                <div class="creator-info d-flex  gap-5">
+                    <span>
+                        <span th:text="${#authentication.principal.fullName}">Tên người dùng</span>
+                        <select name="privacyLevel" class="privacy-select">
+                            <option value="PUBLIC">🌍 Công khai</option>
+                            <option value="FRIENDS">👥 Bạn bè</option>
+                            <option value="PRIVATE">🔒 Chỉ mình tôi</option>
+                        </select>
+                    </span>
+                    <span>
+                        <span>Ai có thể comment bài viết</span>
+                        <select name="privacyCommentLevel" class="privacy-select">
+                            <option value="PUBLIC">🌍 Công khai</option>
+                            <option value="FRIENDS">👥 Bạn bè</option>
+                            <option value="PRIVATE">🔒 Chỉ mình tôi</option>
+                        </select>
+                    </span>
+                </div>
+            </div>
+
+            <textarea name="content" class="form-control post-content-input" rows="3"
+                      placeholder="Chia sẻ suy nghĩ của bạn..."></textarea>
+
+            <!-- Image preview area -->
+            <div id="image-preview-container" class="image-preview-container" style="display: none;">
+                <div id="image-preview-list" class="image-preview-list"></div>
+            </div>
+
+            <div class="post-options">
+                <div class="post-actions-left">
+                    <label for="image-input" class="action-btn">
+                        <i class="fas fa-photo-video"></i> Ảnh / Video
+                    </label>
+                    <input type="file" id="image-input" name="images" accept="image/*,video/*" multiple style="display:none;">
+                </div>
+                <button type="submit" class="btn btn-primary post-btn" id="post-submit-btn" disabled>
+                    <i class="fas fa-paper-plane"></i> Đăng
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Edit Post Modal (reuse from news-feed) -->
+<div th:fragment="edit-post-form">
+    <div class="modal fade" id="editPostModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chỉnh sửa bài viết</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="edit-post-form">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit-post-id">
+
+                        <div class="mb-3">
+                            <label>Quyền riêng tư:</label>
+                            <select id="edit-privacy-level" class="form-select mb-3">
+                                <option value="PUBLIC">🌍 Công khai</option>
+                                <option value="FRIENDS">👥 Bạn bè</option>
+                                <option value="PRIVATE">🔒 Chỉ mình tôi</option>
+                            </select>
+
+                            <label>Quyền bình luận:</label>
+                            <select id="edit-comment-privacy-level" class="form-select mb-3">
+                                <option value="PUBLIC">🌍 Công khai</option>
+                                <option value="FRIENDS">👥 Bạn bè</option>
+                                <option value="PRIVATE">🔒 Chỉ mình tôi</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <textarea id="edit-content" class="form-control" rows="4" required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Ảnh hiện tại:</label>
+                            <div id="edit-existing-images" class="existing-images-container"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit-new-images" class="form-label">Thêm ảnh mới:</label>
+                            <input type="file" id="edit-new-images" class="form-control" accept="image/*" multiple>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

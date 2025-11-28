@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif;
+}
+
+body {
+    /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
+    background: #f4f4f4;
+    min-height: 100vh;
+    color: #333;
+    margin-top: 5%;
+    position: relative;
+}
+
+
+:root {
+    --navbar-height: 56px; /* Chiều cao navbar Bootstrap mặc định */
+}
+
+.navbar-fixed-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.form-control {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
+
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Responsive: Điều chỉnh chiều cao navbar nếu cần */
+@media (max-width: 768px) {
+    :root {
+        --navbar-height: 48px;
+    }
+}
+
+
+/* mention style */
+a.mention {
+    display: inline-block;
+    padding: 2px 8px;              /* khoảng cách trong khung */
+    border-radius: 12px;           /* bo góc */
+    background: #eef6ff;           /* nền nhạt */
+    color: #0b63d6;                /* màu chữ */
+    text-decoration: none;         /* bỏ gạch chân */
+    border: 1px solid #cfe3ff;     /* viền mảnh */
+    font-weight: 500;
+    font-size: 0.95em;
+    line-height: 1;
+    vertical-align: middle;
+    transition: background .15s ease, box-shadow .15s ease, transform .06s ease;
+    box-shadow: none;
+}
+
+/* hover */
+a.mention:hover {
+    background: #d7ebff;
+    box-shadow: 0 4px 10px rgba(11,99,214,0.10);
+    transform: translateY(-1px);
+}
+
+/* focus (keyboard accessible) */
+a.mention:focus {
+    outline: 3px solid rgba(11,99,214,0.15);
+    outline-offset: 2px;
+    background: #d7ebff;
+}
+
+/* subtle active state */
+a.mention:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
