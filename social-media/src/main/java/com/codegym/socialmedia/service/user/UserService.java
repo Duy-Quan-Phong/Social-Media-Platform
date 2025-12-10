@@ -34,4 +34,8 @@ public interface UserService {
 
     void deleteAllUsers();
     List<UserDTO> searchUsers(String keyword, Long currentUserId);
+
+    void cretePasswordResetTokenForUser(User user,String token);
+    User findUserByPasswordResetToken(String token);
+    void changeUserPassword(User user,String password);
 }

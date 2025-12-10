@@ -91,6 +91,10 @@ public class User {
     @OneToMany(mappedBy = "resultUser")
     private List<UserSearchHistory> searchesFoundIn;
 
+    // Fields for Forgot Password feature
+    private String resetPasswordToken;
+    private LocalDateTime tokenExpiryDate;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserPrivacySettings privacySettings;
 
