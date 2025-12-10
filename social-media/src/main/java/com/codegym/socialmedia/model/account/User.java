@@ -14,10 +14,12 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.Objects; // Import thêm Objects
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter // Thay thế @Data
+@Setter // Thay thế @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
@@ -140,16 +142,6 @@ public class User {
         ACTIVE, SUSPENDED, BANNED, PENDING
     }
 
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                '}';
-    }
-
     public boolean isAdmin() {
         return this.roles.stream()
                 .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
@@ -157,5 +149,32 @@ public class User {
 
     public String getFullName() {
         return firstName + " " + lastName;
+    }
+
+    // --- PHẦN QUAN TRỌNG ĐÃ SỬA (FIX LỖI STACKOVERFLOW) ---
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        // Chỉ so sánh ID. Nếu ID null thì coi như khác nhau.
+        return getId() != null && getId().equals(user.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        // Trả về hash code cố định của class để đảm bảo tính nhất quán trong các Set/Map
+        return getClass().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        // Method này bạn đã viết thủ công rất tốt, không bị loop, mình giữ nguyên.
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                '}';
     }
 }

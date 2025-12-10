@@ -10,6 +10,7 @@
     <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
     <link rel="stylesheet" th:href="@{/css/news-feed.css}">
     <link rel="stylesheet" th:href="@{/css/post.css}">
+    <link rel="stylesheet" th:href="@{/css/reel-feed.css}">
     <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -49,7 +50,7 @@
             <i class="fas fa-bookmark"></i>
             <span>Đã lưu</span>
         </a>
-        <a href="#" class="nav-item body-item developing">
+        <a th:href="@{/reels}" class="nav-item body-item">
             <i class="fas fa-video"></i>
             <span>Video</span>
         </a>

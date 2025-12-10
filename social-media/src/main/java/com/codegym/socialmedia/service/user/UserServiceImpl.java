@@ -163,7 +163,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User save(User user, MultipartFile image) {
         if (image != null && !image.isEmpty()) {
-            user.setProfilePicture(cloudinaryService.upload(image));
+            user.setProfilePicture(cloudinaryService.uploadLarge(image));
         }
         return iUserRepository.save(user);
     }
@@ -208,7 +208,7 @@ public class UserServiceImpl implements UserService {
 
             try {
                 MultipartFile avatarFile = fromUrl(avatar, "avatar.jpg");
-                avatar = cloudinaryService.upload(avatarFile);
+                avatar = cloudinaryService.uploadLarge(avatarFile);
             } catch (Exception e) {
                 e.printStackTrace();
             }

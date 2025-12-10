@@ -38,7 +38,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authz -> authz
                         // cấu hình quyền truy cap cho các đường dẫn.
-                        .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**", "/api/debug/**", "/ws/**", "/forgot-password", "/reset-password").permitAll()
+                        .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**", "/api/debug/**", "/ws/**", "/forgot-password", "/reset-password", "/reels/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

@@ -12,7 +12,6 @@
 
     <nav class="navbar navbar-expand-lg shadow-sm">
         <div class="container-fluid d-flex justify-content-between align-items-center px-3">
-            <!-- LEFT: Logo + Search -->
             <div class="d-flex align-items-center" style="gap: 10px;">
                 <a class="navbar-brand me-2 logo" th:href="@{/news-feed}">
                     <img th:src="@{/images/2023_Facebook_icon.svg.webp}" alt="Facebook" height="42">
@@ -23,7 +22,6 @@
                 </form>
             </div>
 
-            <!-- CENTER: Navigation icons -->
             <div class="d-none d-lg-flex justify-content-center align-items-center flex-grow-1 navigation-center ">
                 <a class="nav-link nav-icon nav-icon-wrapper" th:href="@{/news-feed}"
                    title="Trang chủ" data-bs-toggle="tooltip" data-bs-placement="bottom">
@@ -43,9 +41,7 @@
                 </a>
             </div>
 
-            <!-- RIGHT: Messages, Notifications, User -->
             <div class="d-flex align-items-center gap-3">
-                <!-- Menu Dropdown -->
                 <div class="dropdown">
                     <a id="menuDropdown"
                        class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
@@ -67,7 +63,6 @@
                     </ul>
                 </div>
 
-                <!-- Messages Icon -->
                 <div class="nav-icon-wrapper position-relative" id="messageIcon"
                      data-bs-toggle="tooltip" data-bs-placement="bottom" title="Tin nhắn">
                     <i class="fas fa-comment-dots fa-lg nav-icon"></i>
@@ -82,7 +77,6 @@
                     </div>
                 </div>
 
-                <!-- Notifications Dropdown -->
                 <div class="dropdown">
                     <a id="notificationDropdown"
                        class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
@@ -101,7 +95,6 @@
                     </ul>
                 </div>
 
-                <!-- User Dropdown -->
                 <div class="nav-item dropdown" sec:authorize="isAuthenticated()">
                     <a class="nav-link dropdown-toggle p-0 d-flex align-items-center" href="#" role="button"
                        data-bs-toggle="dropdown" aria-expanded="false">
@@ -136,7 +129,6 @@
                     </ul>
                 </div>
 
-                <!-- Login Icon -->
                 <div class="nav-item nav-icon-wrapper" sec:authorize="!isAuthenticated()"
                      data-bs-toggle="tooltip" data-bs-placement="bottom" title="Đăng nhập">
                     <a class="nav-icon" th:href="@{/login}">
@@ -147,7 +139,6 @@
         </div>
     </nav>
 
-    <!-- Modal Tạo nhóm -->
     <div data-bs-backdrop="false" class="modal fade" id="createGroupModal" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -180,9 +171,11 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        const currentUserId = /*[[${#authentication.principal.id}]]*/ null;
+        // Fix: Nếu đã đăng nhập thì lấy ID, chưa thì gán null
+        const currentUserId = /*[[${#authorization.expression('isAuthenticated()') ? #authentication.principal.id : null}]]*/ null;
         /*]]>*/
     </script>
+
     <script>
         function activateNavLinks() {
             const navLinks = document.querySelectorAll(".nav-link");

@@ -1,6 +1,10 @@
 import {formatTimeAgo} from './timeUtils.js';
 
 // Posts JavaScript
+    navigateToReel(videoUrl) {
+        // Chuyển hướng đến trang reels, có thể truyền videoUrl để hiển thị video đó đầu tiên
+        window.location.href = '/reels';
+    }
 class PostManager {
     constructor() {
         this.currentPage = 0;
@@ -280,7 +284,7 @@ class PostManager {
         return `
             <div class="post-item" data-post-id="${post.id}">
                 <div class="post-header">
-                    <img src="${post.userAvatarUrl || '/images/default-avatar.jpg'}" 
+                    <img src="${post.userAvatarUrl || '/images/default-avatar.jpg'}"
                          alt="Avatar" class="post-avatar">
                     <div class="post-user-info">
                         <a href="/profile/${post.username}" class="post-username">
@@ -297,7 +301,7 @@ class PostManager {
                     </div>
                     ${post.canEdit || post.canDelete ? `
                        <!-- Dropdown -->
-                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton" 
+                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton"
                                   data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-ellipsis-h"></i>
                           </button>
@@ -315,29 +319,29 @@ class PostManager {
                           </ul>
                     ` : ''}
                 </div>
-                
+
                 <div class="post-content">${post.content}</div>
-                
+
                 ${imagesHtml}
-                
+
                     <div class="post-stats">
                         <div class="post-likes">
                                 <div class="post-likes-icon">
                                     <i class="fas fa-heart"></i>
                                 </div>
                                 <span>${post.likesCount} lượt thích</span>
-                           
+
                         </div>
                         <div>
                                 <span class="post-comments-count"
-                                 style="cursor:pointer;" 
+                                 style="cursor:pointer;"
       onclick="postManager.toggleComments(${post.id}, true)">${post.commentsCount} bình luận</span>
                         </div>
                     </div>
-              
-                
+
+
                 <div class="post-actions">
-                    <button class="post-action ${post.likedByCurrentUser ? 'liked' : ''}" 
+                    <button class="post-action ${post.likedByCurrentUser ? 'liked' : ''}"
                             onclick="postManager.toggleLike(${post.id},'post')">
                         <i class="fas fa-heart"></i>
                         <span>Thích</span>
@@ -346,19 +350,19 @@ class PostManager {
                         <i class="fas fa-comment"></i>
                         <span>Bình luận</span>
                     </button>` : ''}
-                 
-                    
+
+
                     <button class="post-action">
                         <i class="fas fa-share"></i>
                         <span>Chia sẻ</span>
                     </button>
                 </div>
-                
+
                 <div class="post-comments" id="comments-${post.id}" style="display: none;">
                  ${post.canComment ? `<div class="comment-form">
                         <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar">
                         <div class="comment-input-container" style="position: relative">
-                            <textarea class="comment-input" placeholder="Viết bình luận..." 
+                            <textarea class="comment-input" placeholder="Viết bình luận..."
                                      onkeypress="postManager.handleCommentKeyPress(event, ${post.id})"
                                      onkeydown="postManager.handleMentionKeyDown(event, ${post.id}, 'main-${post.id}')"
 
@@ -369,8 +373,8 @@ class PostManager {
                             </button>
                          </div>
                     </div>` : ''}
-                    
-                    
+
+
                     <div class="comments-list" id="comments-list-${post.id}" style="max-height:300px; overflow-y:auto;">
                         <!-- Comments will be loaded here -->
                     </div>
@@ -396,7 +400,7 @@ class PostManager {
             <div class="post-images">
                 <div class="post-images-single">
                     ${isVideo(mediaUrl)
-                ? `<video controls class="post-video">
+                ? `<video controls class="post-video" onclick="postManager.navigateToReel('${mediaUrl}')">
                                <source src="${mediaUrl}" type="video/${mediaUrl.split('.').pop()}">
                                Trình duyệt của bạn không hỗ trợ video.
                            </video>`
@@ -416,13 +420,12 @@ class PostManager {
             const mediaUrl = imageUrls[i];
 
             html += `
-            <div class="post-image-item ${isLast ? 'post-images-more' : ''}" 
-                 ${isLast ? `data-count="${extraCount}"` : ''} 
-                 ${!isVideo(mediaUrl)
-                ? `onclick="postManager.viewImages(${JSON.stringify(imageUrls).replace(/"/g, '&quot;')}, ${i})"`
-                : ''}>
-                ${isVideo(mediaUrl)
-                ? `<video controls class="post-video">
+            <div class="post-image-item ${isLast ? 'post-images-more' : ''}"
+                 ${isLast ? `data-count="${extraCount}"` : ''}
+          ${!isVideo(mediaUrl)
+426	                ? `onclick="postManager.viewImages(${JSON.stringify(imageUrls).replace(/"/g, '&quot;')}, ${i})"`
+427	                : `onclick="postManager.navigateToReel('${mediaUrl}')"`}>        ${isVideo(mediaUrl)
+                ? `<video controls class="post-video" onclick="postManager.navigateToReel('${mediaUrl}')">
                            <source src="${mediaUrl}" type="video/${mediaUrl.split('.').pop()}">
                            Trình duyệt của bạn không hỗ trợ video.
                        </video>`

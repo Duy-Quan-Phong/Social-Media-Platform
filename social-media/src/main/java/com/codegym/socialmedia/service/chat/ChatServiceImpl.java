@@ -253,7 +253,7 @@ public class ChatServiceImpl implements ChatService {
 
             String url="https://res.cloudinary.com/dryyvmkwo/image/upload/v1748588721/samples/cloudinary-group.jpg";
             if (file != null && !file.isEmpty()) {
-                url=cloudinaryService.upload(file);
+                url=cloudinaryService.uploadLarge(file);
             }
 
             conv.setGroupAvatar(url);
