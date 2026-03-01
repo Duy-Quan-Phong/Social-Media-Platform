@@ -14,7 +14,7 @@ public class CloudinaryService {
     @Autowired
     private Cloudinary cloudinary;
 
-    public String upload(MultipartFile file) {
+    public String uploadLarge(MultipartFile file) {
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap("resource_type", "auto"));
@@ -26,4 +26,16 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadVideo(MultipartFile file) {
+        try {
+            Map uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap("resource_type", "video")
+            );
+            return (String) uploadResult.get("secure_url");
+        } catch (IOException ex) {
+            System.out.println("Upload video lỗi: " + ex.getMessage());
+            return null;
+        }
+    }
 }

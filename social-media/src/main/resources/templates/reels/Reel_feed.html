@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <th:block th:if="${_csrf}">
+        <meta name="_csrf" th:content="${_csrf.token}"/>
+        <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    </th:block>
+
+    <title>Reels | Full Screen</title>
+
+    <style>
+        /* --- 1. SETUP FULL SCREEN DARK MODE --- */
+        body {
+            background-color: #000 !important;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .reels-viewport {
+            height: calc(100vh - 56px);
+            width: 100%;
+            margin-top: 56px;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            transition: margin-right 0.3s ease;
+        }
+        .reels-viewport.shrink { margin-right: 360px; }
+        .reels-viewport::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        /* --- 2. TỪNG VIDEO --- */
+        .reel-item {
+            height: 100%; width: 100%;
+            display: flex; justify-content: center; align-items: center;
+            scroll-snap-align: start; scroll-snap-stop: always;
+            position: relative; background: #000;
+            border: none; margin: 0; padding: 0;
+        }
+
+        .video-wrapper {
+            position: relative;
+            height: 100%; width: 100%;
+            max-width: 450px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .reel-video {
+            height: 100%; width: 100%;
+            object-fit: contain;
+            cursor: pointer; display: block;
+        }
+
+        /* --- 3. CÁC NÚT ĐIỀU KHIỂN --- */
+        .center-icon {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 80px; color: rgba(255,255,255,0.7);
+            pointer-events: none; opacity: 0; transition: opacity 0.2s;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        }
+        .video-wrapper.paused .center-icon { opacity: 1; }
+
+        .mute-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; z-index: 10;
+            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+        }
+
+        /* SIDEBAR ACTIONS */
+        .action-sidebar {
+            position: absolute; right: 10px; bottom: 100px;
+            display: flex; flex-direction: column; gap: 20px; z-index: 20;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: rgba(0, 0, 0, 0.4); width: 48px; height: 48px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1); color: #fff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.2s; backdrop-filter: blur(2px);
+        }
+        .action-btn:hover { background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
+        .action-btn i { font-size: 22px; margin-bottom: 2px; }
+        .action-btn span { font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px #000; }
+        .action-btn.liked { color: #f23e5c; }
+        .action-btn.liked i { font-weight: 900; }
+
+        /* INFO USER */
+        .reel-info-overlay {
+            position: absolute; bottom: 20px; left: 10px; right: 70px;
+            z-index: 10; text-align: left; pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .user-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; pointer-events: auto; }
+        .avatar-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #2e89ff; object-fit: cover; }
+        .username { font-weight: 700; font-size: 15px; color: #fff; text-decoration: none; }
+        .follow-btn { border: 1px solid rgba(255,255,255,0.6); padding: 2px 8px; border-radius: 4px; font-size: 12px; color: #fff; text-decoration: none; background: rgba(0,0,0,0.3); }
+        .caption-text { font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; pointer-events: auto; }
+
+        /* COMMENT SIDEBAR */
+        .comment-sidebar-container {
+            position: fixed; top: 56px; right: -360px;
+            width: 360px; height: calc(100vh - 56px);
+            background: #242526; border-left: 1px solid #3e4042;
+            z-index: 1000; transition: right 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+            display: flex; flex-direction: column;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+        }
+        .comment-sidebar-container.open { right: 0; }
+
+        .sidebar-header {
+            padding: 12px 16px; border-bottom: 1px solid #3e4042;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #242526;
+        }
+        .sidebar-header h3 { margin: 0; font-size: 18px; color: #e4e6eb; font-weight: 700; }
+        .close-sidebar-btn { background: #3a3b3c; border: none; color: #b0b3b8; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .close-sidebar-btn:hover { background: #4e4f50; }
+
+        .sidebar-body { flex: 1; overflow-y: auto; padding: 12px; }
+        .sidebar-body::-webkit-scrollbar { width: 6px; }
+        .sidebar-body::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+        .cmt-item { display: flex; gap: 10px; margin-bottom: 16px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .cmt-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .cmt-right-col { display: flex; flex-direction: column; max-width: 85%; }
+        .cmt-bubble {
+            background: #3a3b3c; padding: 8px 12px; border-radius: 18px;
+            display: flex; flex-direction: column;
+        }
+        .cmt-username { font-weight: 600; font-size: 13px; color: #e4e6eb; margin-bottom: 2px; }
+        .cmt-text { font-size: 14px; color: #e4e6eb; word-wrap: break-word; line-height: 1.3; }
+        .cmt-meta { margin-top: 4px; margin-left: 10px; font-size: 12px; color: #b0b3b8; }
+
+        .sidebar-footer {
+            padding: 12px; border-top: 1px solid #3e4042; background: #242526;
+            display: flex; gap: 10px; align-items: flex-end;
+        }
+        .my-avatar-mini { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-bottom: 2px; }
+        .input-wrapper {
+            flex: 1; background: #3a3b3c; border-radius: 20px;
+            display: flex; align-items: center; padding: 0 12px;
+        }
+        .sidebar-input {
+            width: 100%; background: transparent; border: none;
+            padding: 10px 0; color: white; outline: none; font-size: 14px;
+        }
+        .cmt-send-btn { background: none; border: none; color: #2e89ff; cursor: pointer; padding: 8px; }
+        .cmt-send-btn:hover { color: #5aa1ff; }
+        .cmt-send-btn:disabled { color: #555; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="reels-viewport" id="reelsViewport">
+
+    <div th:each="reel : ${reels}" class="reel-item" th:id="'reel-' + ${reel.id}">
+        <div class="video-wrapper" onclick="togglePlay(this)">
+
+            <video class="reel-video" loop playsinline
+                   th:src="${reel.videoUrl}"
+                   th:poster="${reel.thumbnailUrl}">
+            </video>
+
+            <div class="center-icon"><i class="fas fa-play"></i></div>
+
+            <button class="mute-btn" onclick="toggleMute(event, this)">
+                <i class="fas fa-volume-up"></i>
+            </button>
+
+            <div class="action-sidebar" onclick="event.stopPropagation()">
+                <button class="action-btn" th:classappend="${reel.isLiked} ? 'liked' : ''"
+                        th:onclick="'toggleLike(' + ${reel.id} + ', this)'">
+                    <i th:class="${reel.isLiked} ? 'fas fa-heart' : 'fas fa-heart'"></i>
+                    <span class="like-count" th:text="${reel.likesCount}">0</span>
+                </button>
+
+                <button class="action-btn" th:onclick="'openCommentSidebar(' + ${reel.id} + ')'">
+                    <i class="fas fa-comment-dots"></i>
+                    <span class="comment-count" th:text="${reel.commentsCount}">0</span>
+                </button>
+
+                <button class="action-btn">
+                    <i class="fas fa-share"></i>
+                    <span th:text="${reel.sharesCount}">0</span>
+                </button>
+            </div>
+
+            <div class="reel-info-overlay">
+                <div class="user-row">
+                    <img class="avatar-circle" th:src="${reel.user.profilePicture != null ? reel.user.profilePicture : '/images/default-avatar.jpg'}">
+                    <a href="#" class="username" th:text="${reel.user.username}">Username</a>
+                    <a href="#" class="follow-btn">Theo dõi</a>
+                </div>
+                <div class="caption-text" th:text="${reel.caption}">Caption...</div>
+            </div>
+
+        </div>
+    </div>
+
+    <div th:if="${reels.isEmpty()}" style="height: 100%; display: flex; align-items: center; justify-content: center; color: #777;">
+        <h3>Chưa có thước phim nào.</h3>
+    </div>
+</div>
+
+<div id="commentSidebar" class="comment-sidebar-container">
+    <div class="sidebar-header">
+        <h3>Bình luận</h3>
+        <button class="close-sidebar-btn" onclick="closeSidebar()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="sidebar-body" id="sidebarBody">
+        <div style="text-align:center; padding: 20px; color: #b0b3b8;">Đang tải...</div>
+    </div>
+
+    <div class="sidebar-footer">
+        <img th:src="${currentUserAvatar}" class="my-avatar-mini" alt="Me">
+        <div class="input-wrapper">
+            <input type="text" id="globalCmtInput" class="sidebar-input" placeholder="Viết bình luận..." onkeypress="handleSidebarEnter(event)">
+            <button class="cmt-send-btn" id="sendBtn" onclick="submitGlobalComment()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========================================
+    // ⭐ HELPER: LẤY CSRF TOKEN CHO API CALL
+    // ========================================
+    function getAuthHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfMeta = document.querySelector('meta[name="_csrf"]');
+        if (csrfMeta) {
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+            headers[csrfHeader] = csrfMeta.getAttribute('content');
+        }
+        return headers;
+    }
+
+    // ========================================
+    // VIDEO CONTROLS
+    // ========================================
+    function togglePlay(wrapper) {
+        const video = wrapper.querySelector('video');
+        if (video.paused) {
+            video.play();
+            wrapper.classList.remove('paused');
+        } else {
+            video.pause();
+            wrapper.classList.add('paused');
+        }
+    }
+
+    function toggleMute(e, btn) {
+        e.stopPropagation();
+        const video = btn.closest('.video-wrapper').querySelector('video');
+        video.muted = !video.muted;
+        btn.querySelector('i').className = video.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+    }
+
+    function toggleLike(reelId, btn) {
+        const countSpan = btn.querySelector('.like-count');
+        let count = parseInt(countSpan.innerText);
+
+        if (btn.classList.contains('liked')) {
+            btn.classList.remove('liked');
+            btn.style.color = '#fff';
+            countSpan.innerText = Math.max(0, count - 1);
+        } else {
+            btn.classList.add('liked');
+            countSpan.innerText = count + 1;
+        }
+        fetch(`/reels/api/${reelId}/like`, { method: 'POST', headers: getAuthHeaders() });
+    }
+
+    // ========================================
+    // ⭐ COMMENT SIDEBAR LOGIC (ĐÃ FIX)
+    // ========================================
+    let currentReelId = null;
+
+    function openCommentSidebar(reelId) {
+        currentReelId = reelId;
+        const sidebar = document.getElementById('commentSidebar');
+        const viewport = document.getElementById('reelsViewport');
+        const body = document.getElementById('sidebarBody');
+
+        sidebar.classList.add('open');
+        viewport.classList.add('shrink');
+
+        body.innerHTML = '<div style="text-align:center; padding:20px; color:#b0b3b8;">Đang tải bình luận...</div>';
+
+        // GỌI API LẤY COMMENT
+        fetch(`/reels/api/${reelId}/comments`, { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then(data => {
+                body.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<div style="text-align:center; padding:20px; color:#b0b3b8;">Chưa có bình luận nào.<br>Hãy là người đầu tiên!</div>';
+                    return;
+                }
+
+                data.forEach(cmt => {
+                    appendCommentToUI(cmt.username, cmt.content, cmt.avatar, cmt.time);
+                });
+            })
+            .catch(err => {
+                console.error('Error loading comments:', err);
+                body.innerHTML = '<div style="color:#f02849; text-align:center; margin-top:20px;">Không tải được dữ liệu!</div>';
+            });
+    }
+
+    function closeSidebar() {
+        document.getElementById('commentSidebar').classList.remove('open');
+        document.getElementById('reelsViewport').classList.remove('shrink');
+        currentReelId = null;
+    }
+
+    function handleSidebarEnter(e) {
+        if(e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitGlobalComment();
+        }
+    }
+
+    // ========================================
+    // ⭐ GỬI COMMENT - ĐÃ FIX ĐÚNG FORMAT
+    // ========================================
+    function submitGlobalComment() {
+        if (!currentReelId) {
+            alert('Vui lòng chọn video để bình luận!');
+            return;
+        }
+
+        const input = document.getElementById('globalCmtInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const content = input.value.trim();
+
+        if (!content) {
+            alert('Vui lòng nhập nội dung bình luận!');
+            return;
+        }
+
+        // Disable button để tránh spam
+        sendBtn.disabled = true;
+
+        // ⭐ ĐIỂM QUAN TRỌNG: GỬI ĐÚNG FORMAT JSON OBJECT
+        const payload = { content: content };
+
+        console.log('📤 Sending comment:', payload); // Debug log
+
+        fetch(`/reels/api/${currentReelId}/comment`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload) // ⭐ { "content": "Nội dung" }
+        })
+        .then(res => {
+            console.log('📥 Response status:', res.status); // Debug log
+
+            if (res.ok) {
+                // Thành công - Thêm comment vào UI ngay lập tức
+                const myAvatar = document.querySelector('.my-avatar-mini').src;
+                appendCommentToUI("Tôi", content, myAvatar, "Vừa xong");
+
+                // Clear input
+                input.value = '';
+
+                // Scroll lên đầu (comment mới nằm trên cùng)
+                const body = document.getElementById('sidebarBody');
+                body.scrollTop = 0;
+
+                // Tăng số comment hiển thị
+                const btnCount = document.querySelector(`#reel-${currentReelId} .comment-count`);
+                if(btnCount) {
+                    btnCount.innerText = parseInt(btnCount.innerText) + 1;
+                }
+
+                console.log('✅ Comment posted successfully!');
+            } else {
+                // Lỗi từ server
+                return res.text().then(errorMsg => {
+                    console.error('❌ Server error:', errorMsg);
+                    alert("Lỗi: " + errorMsg);
+                });
+            }
+        })
+        .catch(err => {
+            console.error('❌ Network error:', err);
+            alert("Không thể gửi bình luận. Vui lòng thử lại!");
+        })
+        .finally(() => {
+            // Enable lại button
+            sendBtn.disabled = false;
+        });
+    }
+
+    // ========================================
+    // RENDER COMMENT VÀO UI
+    // ========================================
+    function appendCommentToUI(username, content, avatar, time) {
+        const body = document.getElementById('sidebarBody');
+
+        // Xóa message "Chưa có bình luận" nếu có
+        if(body.innerText.includes("Chưa có bình luận nào")) {
+            body.innerHTML = "";
+        }
+
+        const html = `
+            <div class="cmt-item">
+                <img src="${avatar}" class="cmt-avatar" onerror="this.src='/images/default-avatar.jpg'">
+                <div class="cmt-right-col">
+                    <div class="cmt-bubble">
+                        <span class="cmt-username">${username}</span>
+                        <span class="cmt-text">${content}</span>
+                    </div>
+                    <div class="cmt-meta">
+                        <span>${time}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Comment mới gửi -> chèn lên đầu (afterbegin)
+        // Comment load từ DB -> chèn xuống cuối (beforeend)
+        if (time === "Vừa xong") {
+            body.insertAdjacentHTML('afterbegin', html);
+        } else {
+            body.insertAdjacentHTML('beforeend', html);
+        }
+    }
+
+    // ========================================
+    // AUTO PLAY VIDEO KHI SCROLL
+    // ========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        const videos = document.querySelectorAll('video');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const video = entry.target;
+                if (entry.isIntersecting) {
+                    video.currentTime = 0;
+                    video.play().catch(() => {});
+                    video.closest('.video-wrapper').classList.remove('paused');
+                } else {
+                    video.pause();
+                }
+            });
+        }, { threshold: 0.6 });
+
+        videos.forEach(v => observer.observe(v));
+    });
+</script>
+</body>
+</html>

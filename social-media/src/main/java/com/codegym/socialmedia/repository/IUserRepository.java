@@ -13,6 +13,7 @@ import java.util.List;
 
 @Repository
 public interface IUserRepository extends JpaRepository<User, Long> {
+    User findByResetPasswordToken(String token);
     User findByUsername(String username);
     User findByEmail(String email);
     boolean existsByUsername(String username);

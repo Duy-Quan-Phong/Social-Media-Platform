@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Tải lên Reel mới</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
+</head>
+<body>
+
+
+<div class="container mt-5">
+    <h2>Tải lên Reel mới</h2>
+    <form th:action="@{/reels/upload}" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="videoFile" class="form-label">Chọn Video (MP4, MOV...)</label>
+            <input type="file" class="form-control" id="videoFile" name="videoFile" accept="video/*" required>
+        </div>
+        <div class="mb-3">
+            <label for="caption" class="form-label">Chú thích (Caption)</label>
+            <textarea class="form-control" id="caption" name="caption" rows="3" placeholder="Thêm mô tả và hashtag..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Tải lên</button>
+    </form>
+
+    <div th:if="${message}" class="alert alert-info mt-3" th:text="${message}"></div>
+    <div th:if="${error}" class="alert alert-danger mt-3" th:text="${error}"></div>
+</div>
+
+</body>
+</html>

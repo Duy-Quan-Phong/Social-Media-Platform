@@ -8,6 +8,7 @@ import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.account.UserPrivacySettings;
 import com.codegym.socialmedia.repository.*;
+import jakarta.validation.constraints.Email;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -51,6 +53,9 @@ public class UserServiceImpl implements UserService {
     @Qualifier("customUserDetailsService")
     private UserDetailsService userDetailsService;
     private FriendshipRepository friendshipRepository;
+
+    @Autowired
+    private EmailService emailService;
     public User save(UserRegistrationDto registrationDto) {
         User user = new User();
         user.setUsername(registrationDto.getUsername());
@@ -126,6 +131,7 @@ public class UserServiceImpl implements UserService {
     }
 
 
+
     @Override
     public User getUserById(Long id) {
         return iUserRepository.findById(id).orElse(null);
@@ -157,7 +163,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User save(User user, MultipartFile image) {
         if (image != null && !image.isEmpty()) {
-            user.setProfilePicture(cloudinaryService.upload(image));
+            user.setProfilePicture(cloudinaryService.uploadLarge(image));
         }
         return iUserRepository.save(user);
     }
@@ -202,7 +208,7 @@ public class UserServiceImpl implements UserService {
 
             try {
                 MultipartFile avatarFile = fromUrl(avatar, "avatar.jpg");
-                avatar = cloudinaryService.upload(avatarFile);
+                avatar = cloudinaryService.uploadLarge(avatarFile);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -313,4 +319,32 @@ public class UserServiceImpl implements UserService {
     }
 
     // ✅ REMOVED getUserStats method - now handled by UserStatsService
+
+
+    @Override
+    public void cretePasswordResetTokenForUser(User user, String token) {
+        user.setResetPasswordToken(token);
+        user.setTokenExpiryDate(LocalDateTime.now().plusHours(24));
+        iUserRepository.save(user);
+
+        // Gửi email
+        emailService.sendPasswordResetEmail(user.getEmail(), token);
+    }
+
+    @Override
+    public User findUserByPasswordResetToken(String token) {
+        User user = iUserRepository.findByResetPasswordToken(token);
+        if (user != null && user.getTokenExpiryDate().isAfter(LocalDateTime.now())) {
+            return user;
+        }
+        return null;
+    }
+
+    @Override
+    public void changeUserPassword(User user, String password) {
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setResetPasswordToken(null);
+        user.setTokenExpiryDate(null);
+        iUserRepository.save(user);
+    }
 }

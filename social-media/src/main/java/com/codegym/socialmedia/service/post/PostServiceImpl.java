@@ -63,7 +63,7 @@ public class PostServiceImpl implements PostService {
             List<String> imageUrls = new ArrayList<>();
             for (MultipartFile image : dto.getImages()) {
                 if (!image.isEmpty()) {
-                    String imageUrl = cloudinaryService.upload(image);
+                    String imageUrl = cloudinaryService.uploadLarge(image);
                     if (imageUrl != null) {
                         imageUrls.add(imageUrl);
                     }
@@ -98,7 +98,7 @@ public class PostServiceImpl implements PostService {
         if (dto.getNewImages() != null && !dto.getNewImages().isEmpty()) {
             for (MultipartFile newImage : dto.getNewImages()) {
                 if (!newImage.isEmpty()) {
-                    String imageUrl = cloudinaryService.upload(newImage);
+                    String imageUrl = cloudinaryService.uploadLarge(newImage);
                     if (imageUrl != null) {
                         newImageUrls.add(imageUrl);
                     }
