@@ -13,6 +13,7 @@ class PostManager {
         this.submitBtn = document.getElementById("post-submit-btn");
         const container = document.getElementById('posts-container');
         this.username = container.getAttribute('data-username');
+        this.isSavedPage = container.getAttribute('data-saved') === 'true';
         this.init();
     }
 
@@ -170,6 +171,10 @@ class PostManager {
         postsContainer.innerHTML = '';
 
         await this.loadPosts();
+
+        // Ẩn skeleton sau khi posts đã load
+        const skeleton = document.getElementById('skeleton-container');
+        if (skeleton) skeleton.style.display = 'none';
     }
 
     async loadPosts() {
@@ -179,14 +184,17 @@ class PostManager {
         this.isLoading = true;
         this.showLoading(true);
 
-        let controllerURL = `/posts/api/feed?page=${this.currentPage}&size=10`;
         const urlParams = new URLSearchParams(window.location.search);
-        controllerURL += '&postID=' + (urlParams.get('postID') ? parseInt(urlParams.get('postID')) : -1);
+        let controllerURL;
 
-        controllerURL += '&commentID=' + (urlParams.get('commentID') ? parseInt(urlParams.get('commentID')) : -1);
-
-        if (this.username != null && this.username != undefined && this.username.trim() != '') {
+        if (this.isSavedPage) {
+            controllerURL = `/posts/api/saved?page=${this.currentPage}&size=10`;
+        } else if (this.username != null && this.username != undefined && this.username.trim() != '') {
             controllerURL = `/posts/api/user/${this.username}?page=${this.currentPage}&size=10`;
+        } else {
+            controllerURL = `/posts/api/feed?page=${this.currentPage}&size=10`;
+            controllerURL += '&postID=' + (urlParams.get('postID') ? parseInt(urlParams.get('postID')) : -1);
+            controllerURL += '&commentID=' + (urlParams.get('commentID') ? parseInt(urlParams.get('commentID')) : -1);
         }
 
         try {
@@ -297,22 +305,24 @@ class PostManager {
                     </div>
                     ${post.canEdit || post.canDelete ? `
                        <!-- Dropdown -->
-                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton" 
+                       <div class="dropdown">
+                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton-${post.id}"
                                   data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-ellipsis-h"></i>
                           </button>
-                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-${post.id}">
                             <li>
                              ${post.canEdit ? `<button class="dropdown-item" onclick="postManager.editPost(${post.id})">
                                     <i class="fas fa-edit"></i> Chỉnh sửa
                                 </button>` : ''}
                             </li>
                             <li>
-                                ${post.canDelete ? `<button  class="dropdown-item text-danger" onclick="postManager.deletePost(${post.id})">
+                                ${post.canDelete ? `<button class="dropdown-item text-danger" onclick="postManager.deletePost(${post.id})">
                                     <i class="fas fa-trash"></i> Xóa
-                                </button >` : ''}
+                                </button>` : ''}
                             </li>
                           </ul>
+                       </div>
                     ` : ''}
                 </div>
                 
@@ -348,9 +358,10 @@ class PostManager {
                     </button>` : ''}
                  
                     
-                    <button class="post-action">
-                        <i class="fas fa-share"></i>
-                        <span>Chia sẻ</span>
+                    <button class="post-action save-btn ${post.savedByCurrentUser ? 'saved' : ''}"
+                            onclick="postManager.toggleSave(${post.id})">
+                        <i class="${post.savedByCurrentUser ? 'fas' : 'far'} fa-bookmark"></i>
+                        <span>${post.savedByCurrentUser ? 'Đã lưu' : 'Lưu'}</span>
                     </button>
                 </div>
                 
@@ -464,6 +475,41 @@ class PostManager {
         } catch (err) {
             console.error(err);
             alert(err.message || "Có lỗi xảy ra khi like/unlike");
+        }
+    }
+
+    async toggleSave(postId) {
+        try {
+            const res = await fetch(`/posts/api/save/${postId}`, {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.updateSaveUI(postId, data.saved);
+                this.showNotification(data.message, 'success');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    updateSaveUI(postId, saved) {
+        const postEl = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+        if (!postEl) return;
+        const btn = postEl.querySelector('.save-btn');
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        const label = btn.querySelector('span');
+        if (saved) {
+            btn.classList.add('saved');
+            if (icon) icon.className = 'fas fa-bookmark';
+            if (label) label.textContent = 'Đã lưu';
+        } else {
+            btn.classList.remove('saved');
+            if (icon) icon.className = 'far fa-bookmark';
+            if (label) label.textContent = 'Lưu';
+            if (this.isSavedPage) postEl.remove();
         }
     }
 

@@ -25,6 +25,10 @@ public interface PostService {
     Page<PostDisplayDto> getPublicPostsByUser(User targetUser, User currentUser ,Pageable pageable);
     Page<PostDisplayDto> searchUserPosts(User user,User currentUser, String keyword, Pageable pageable);
 
+    // Save/Bookmark functionality
+    boolean toggleSavePost(Long postId, User user);
+    Page<PostDisplayDto> getSavedPosts(User user, Pageable pageable);
+
     // Like functionality
     boolean toggleLike(Long postId, User user);
     List<User> getUsersWhoLiked(Long postId);

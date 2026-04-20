@@ -4,6 +4,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,13 +20,15 @@ import java.util.function.Function;
 @PropertySource("classpath:secret.properties")
 public class JwtUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
+
     @Value("${jwt_secret_key:defaultSecretKey123456789}")  // Giá trị mặc định
     private String SECRET_KEY;
 
     @PostConstruct
     public void init() {
         if ("defaultSecretKey123456789".equals(SECRET_KEY)) {
-            System.err.println("WARNING: Using default JWT secret key. Please configure jwt_secret_key in your properties file!");
+            log.error("WARNING: Using default JWT secret key. Please configure jwt_secret_key in your properties file!");
         }
     }
 

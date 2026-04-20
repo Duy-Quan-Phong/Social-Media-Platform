@@ -2,6 +2,8 @@ package com.codegym.socialmedia.config;
 
 import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.repository.RoleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +12,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
+
+    private static final Logger log = LoggerFactory.getLogger(WebMvcConfig.class);
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
@@ -23,7 +27,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 roleRepository.save(new Role("ROLE_ADMIN"));
                 roleRepository.save(new Role("ROLE_USER"));
                 roleRepository.save(new Role("ROLE_MANAGER"));
-                System.out.println("Inserted sample roles!");
+                log.info("Inserted sample roles!");
             }
         };
     }

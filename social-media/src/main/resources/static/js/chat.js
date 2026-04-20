@@ -19,6 +19,7 @@ class ChatManager {
         this.currentPages = new Map();
         this.hasMore = new Map();
         this.isLoadingHistory = new Map();
+        this.typingTimers = new Map();
         this.maxChats = 3;
         this.maxBubbles = 4;
         this.compactBubbleId = 'chat-bubble-compact';
@@ -264,7 +265,19 @@ class ChatManager {
             const messageData = JSON.parse(message.body);
             this.handleIncomingMessage(messageData);
         });
-        this.subscriptions.set(conversationId, sub); // Store the subscription
+        this.subscriptions.set(conversationId, sub);
+
+        const typingSub = stompClient.subscribe(`/topic/conversation/${conversationId}/typing`, (msg) => {
+            const data = JSON.parse(msg.body);
+            if (String(data.userId) !== String(getCurrentUserId())) {
+                if (data.isTyping) {
+                    this.showTypingIndicator(conversationId, data.senderName);
+                } else {
+                    this.hideTypingIndicator(conversationId);
+                }
+            }
+        });
+        this.subscriptions.set(conversationId + '_typing', typingSub);
     }
 
     async findOrCreateConversation(targetUserId) {
@@ -308,6 +321,10 @@ class ChatManager {
      </div>
   </div>
   <div class="chat-messages" id="messages-${chatId}">
+  </div>
+  <div class="typing-indicator" id="typing-${chatId}" style="display:none">
+    <span class="typing-name"></span>
+    <span class="typing-dots"><span></span><span></span><span></span></span>
   </div>
   <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
   <div class="chat-input">
@@ -410,6 +427,15 @@ class ChatManager {
         if (sub) {
             sub.unsubscribe();
             this.subscriptions.delete(id);
+        }
+        const typingSub = this.subscriptions.get(id + '_typing');
+        if (typingSub) {
+            typingSub.unsubscribe();
+            this.subscriptions.delete(id + '_typing');
+        }
+        if (this.typingTimers.has(id)) {
+            clearTimeout(this.typingTimers.get(id));
+            this.typingTimers.delete(id);
         }
 
         this.updateBubblesCompact();
@@ -789,6 +815,7 @@ class ChatManager {
     handleInput(evt, convId) {
         const ta = evt.target;
         this.autoResize(ta);
+        this.sendTypingStatus(convId, ta.value.length > 0);
         if ((ta.dataset.chatType || 'private') !== 'group') return;
 
         const val = ta.value;
@@ -1030,6 +1057,40 @@ class ChatManager {
             }
         };
         input.click();
+    }
+
+    sendTypingStatus(conversationId, isTyping) {
+        if (!stompClient || !stompClient.connected) return;
+        const id = String(conversationId);
+        if (isTyping) {
+            if (this.typingTimers.has(id)) clearTimeout(this.typingTimers.get(id));
+            stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: true }));
+            const timer = setTimeout(() => {
+                if (stompClient && stompClient.connected) {
+                    stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: false }));
+                }
+                this.typingTimers.delete(id);
+            }, 3000);
+            this.typingTimers.set(id, timer);
+        } else {
+            if (this.typingTimers.has(id)) {
+                clearTimeout(this.typingTimers.get(id));
+                this.typingTimers.delete(id);
+            }
+            stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: false }));
+        }
+    }
+
+    showTypingIndicator(conversationId, name) {
+        const el = document.getElementById(`typing-${conversationId}`);
+        if (!el) return;
+        el.querySelector('.typing-name').textContent = name;
+        el.style.display = 'flex';
+    }
+
+    hideTypingIndicator(conversationId) {
+        const el = document.getElementById(`typing-${conversationId}`);
+        if (el) el.style.display = 'none';
     }
 
     autoResize(ta) {

@@ -41,6 +41,15 @@
                       th:id="'messageBadge-' + ${user.id}"
                       style="display: none;">3</span>
             </button>
+            <!-- Block Button -->
+            <button class="enhanced-message-btn block-btn"
+                    th:id="'blockBtn-' + ${user.id}"
+                    th:data-user-id="${user.id}"
+                    th:data-blocked="${isBlocked}"
+                    th:onclick="'toggleBlock(' + ${user.id} + ', this)'"
+                    th:text="${isBlocked ? 'Bỏ chặn' : 'Chặn'}">
+                Chặn
+            </button>
         </div>
     </div>
 </div>
@@ -176,11 +185,6 @@
         <input type="hidden" id="targetUserId" th:value="${targetUserId}"/>
         <input type="hidden" id="filterValue" th:value="${filter}"/>
         <div class="row" id="friends-list">
-            <div class="col-md-3" th:each="friend : ${friends}">
-                <th:block
-                        th:insert="~{fragments/friend/friendCard :: friendCard(friend=${friend}, nameClass='name-list-friend')}">
-                </th:block>
-            </div>
         </div>
         <div class="loading" id="loading">
             <i class="fas fa-spinner fa-spin"></i> Đang tải...

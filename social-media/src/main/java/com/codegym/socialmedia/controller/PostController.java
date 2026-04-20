@@ -399,4 +399,49 @@ public class PostController {
         }
     }
 
+    @PostMapping("/api/save/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> toggleSave(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        User currentUser = userService.getCurrentUser();
+
+        if (currentUser == null) {
+            response.put("success", false);
+            response.put("message", "Vui lòng đăng nhập");
+            return ResponseEntity.status(401).body(response);
+        }
+
+        try {
+            boolean saved = postService.toggleSavePost(id, currentUser);
+            response.put("success", true);
+            response.put("saved", saved);
+            response.put("message", saved ? "Đã lưu bài viết" : "Đã bỏ lưu bài viết");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Có lỗi xảy ra: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @GetMapping("/api/saved")
+    @ResponseBody
+    public ResponseEntity<?> getSavedPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) return ResponseEntity.status(401).build();
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(postService.getSavedPosts(currentUser, pageable));
+    }
+
+    @GetMapping("/saved")
+    public String savedPostsPage(org.springframework.ui.Model model) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) return "redirect:/login";
+        model.addAttribute("currentUser", currentUser);
+        return "saved-posts";
+    }
+
 }

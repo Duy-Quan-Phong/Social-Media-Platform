@@ -11,6 +11,7 @@ import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostLikeRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;
+import com.codegym.socialmedia.repository.post.SavedPostRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.notification.PostMessage;
 import com.codegym.socialmedia.service.notification.NotificationService;
@@ -23,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -50,6 +54,9 @@ public class PostServiceImpl implements PostService {
 
     @Autowired
     private FriendshipService friendshipService;
+
+    @Autowired
+    private SavedPostRepository savedPostRepository;
 
     @Override
     public Post createPost(PostCreateDto dto, User user) {
@@ -134,39 +141,83 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Page<PostDisplayDto> getPostsForNewsFeed(User currentUser, Pageable pageable) {
-
         Page<Post> posts = postRepository.findVisiblePosts(currentUser.getId(), pageable);
-
-        return posts.map(post -> convertToDisplayDto(post, currentUser));
+        return convertPageWithBatchStats(posts, currentUser);
     }
 
     @Override
     public Page<PostDisplayDto> getPostsByUser(User targetUser, User currentUser, Pageable pageable) {
         Page<Post> posts;
-
         if (currentUser != null && currentUser.getId().equals(targetUser.getId())) {
-            // Own posts - show all
             posts = postRepository.findByUserAndIsDeletedFalseOrderByCreatedAtDesc(targetUser, pageable);
-
         } else {
-            // Others' posts (or friend) - show only public
             posts = postRepository.findVisiblePostsByUser(targetUser, currentUser, pageable);
         }
-
-        return posts.map(post -> convertToDisplayDto(post, currentUser));
+        return convertPageWithBatchStats(posts, currentUser);
     }
 
     @Override
     public Page<PostDisplayDto> getPublicPostsByUser(User targetUser, User currentUser, Pageable pageable) {
         Page<Post> posts = postRepository.findVisiblePostsByUser(targetUser, currentUser, pageable);
-        return posts.map(post -> convertToDisplayDto(post, null));
+        return convertPageWithBatchStats(posts, null);
     }
-
 
     @Override
     public Page<PostDisplayDto> searchUserPosts(User user, User currentUser, String keyword, Pageable pageable) {
         Page<Post> posts = postRepository.searchPostsOnProfile(user, currentUser, keyword, pageable);
-        return posts.map(post -> convertToDisplayDto(post, user));
+        return convertPageWithBatchStats(posts, currentUser);
+    }
+
+    // Batch convert: 1 query per stat type instead of N+N queries
+    private Page<PostDisplayDto> convertPageWithBatchStats(Page<Post> posts, User currentUser) {
+        List<Post> postList = posts.getContent();
+        if (postList.isEmpty()) return posts.map(p -> convertToDisplayDto(p, currentUser));
+
+        Map<Long, Long> likeCounts = postRepository.countLikesByPosts(postList).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Long> commentCounts = postRepository.countCommentsByPosts(postList).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (Long) row[0], row -> (Long) row[1]));
+
+        Set<Long> savedPostIds = new HashSet<>();
+        if (currentUser != null) {
+            savedPostIds.addAll(savedPostRepository.findSavedPostIdsByUserAndPosts(currentUser, postList));
+        }
+
+        return posts.map(post -> {
+            PostDisplayDto dto = convertToDisplayDto(post, currentUser);
+            dto.setLikesCount(likeCounts.getOrDefault(post.getId(), 0L).intValue());
+            dto.setCommentsCount(commentCounts.getOrDefault(post.getId(), 0L).intValue());
+            dto.setSavedByCurrentUser(savedPostIds.contains(post.getId()));
+            return dto;
+        });
+    }
+
+    @Override
+    public boolean toggleSavePost(Long postId, User user) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (savedPostRepository.existsByPostAndUser(post, user)) {
+            savedPostRepository.deleteByPostAndUser(post, user);
+            return false;
+        } else {
+            SavedPost saved = new SavedPost();
+            SavedPostId savedId = new SavedPostId(user.getId(), postId);
+            saved.setId(savedId);
+            saved.setUser(user);
+            saved.setPost(post);
+            savedPostRepository.save(saved);
+            return true;
+        }
+    }
+
+    @Override
+    public Page<PostDisplayDto> getSavedPosts(User user, Pageable pageable) {
+        Page<SavedPost> savedPosts = savedPostRepository.findByUserOrderBySavedAtDesc(user, pageable);
+        Page<Post> posts = savedPosts.map(SavedPost::getPost);
+        return convertPageWithBatchStats(posts, user);
     }
 
     @Override
@@ -220,20 +271,28 @@ public class PostServiceImpl implements PostService {
 
     // Helper methods
     private PostDisplayDto convertToDisplayDto(Post post, User currentUser) {
-        LikePostId likePostId = getLikeStatusId(post.getId(), currentUser.getId());
-        boolean isLiked = currentUser != null &&
-                postLikeRepository.findById(likePostId).isPresent();
+        boolean isLiked = false;
+        if (currentUser != null) {
+            LikePostId likePostId = getLikeStatusId(post.getId(), currentUser.getId());
+            isLiked = postLikeRepository.findById(likePostId).isPresent();
+        }
 
         boolean canEdit = currentUser != null &&
                 post.getUser().getId().equals(currentUser.getId());
 
         boolean canDelete = canEdit;
 
-        PostDisplayDto dto = new PostDisplayDto(post, isLiked, canEdit, canDelete);
+        boolean isSaved = currentUser != null &&
+                savedPostRepository.existsByPostAndUser(post, currentUser);
 
-        if (currentUser.isAdmin()) {
+        PostDisplayDto dto = new PostDisplayDto(post, isLiked, canEdit, canDelete);
+        dto.setSavedByCurrentUser(isSaved);
+
+        if (currentUser == null) {
+            dto.setCanComment(false);
+        } else if (currentUser.isAdmin()) {
             dto.setCanComment(true);
-        }else{
+        } else {
             Friendship.FriendshipStatus friendshipStatus =
                 friendshipService.getFriendshipStatus(post.getUser(), currentUser);
             boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);

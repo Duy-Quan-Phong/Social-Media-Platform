@@ -4,6 +4,7 @@ import com.codegym.socialmedia.component.CloudinaryService;
 import com.codegym.socialmedia.dto.chat.*;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.conversation.*;
+import com.codegym.socialmedia.model.social_action.Friendship;
 import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.ConversationParticipantRepository;
 import com.codegym.socialmedia.repository.ConversationRepository;
@@ -38,6 +39,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private MessageRepository messageRepository;
     @Autowired private IUserRepository userRepository;
     @Autowired private NotificationService notificationService;
+    @Autowired private FriendshipService friendshipService;
 
     @Autowired private UserActivityService userActivityService;
     @Override
@@ -305,7 +307,9 @@ public class ChatServiceImpl implements ChatService {
                     dto.setUsername(u.getUsername());
                     dto.setFullName(safeFullName(u));
                     dto.setAvatarUrl(u.getProfilePicture());
-                    dto.setFriend(true); // TODO: có thể check thật bằng FriendshipService
+                    Friendship.FriendshipStatus status = friendshipService.getFriendshipStatus(
+                        userRepository.findById(currentUserId).orElse(null), u);
+                    dto.setFriend(status == Friendship.FriendshipStatus.ACCEPTED);
                     return dto;
                 }).collect(Collectors.toList());
     }

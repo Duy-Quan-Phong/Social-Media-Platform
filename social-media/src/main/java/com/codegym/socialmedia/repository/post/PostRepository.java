@@ -88,7 +88,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     WHERE p.isDeleted = FALSE
       AND (
            p.privacyLevel = 'PUBLIC'
-        OR (p.privacyLevel = 'FRIENDS' AND 
+        OR (p.privacyLevel = 'FRIENDS' AND
             EXISTS (
                 SELECT f FROM Friendship f
                 WHERE f.status = 'ACCEPTED'
@@ -103,6 +103,28 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     ORDER BY p.createdAt DESC
     """)
     Page<Post> findVisiblePosts(@Param("currentUser") Long currentUser, Pageable pageable);
+
+    @Query("""
+    SELECT p FROM Post p
+    WHERE p.isDeleted = FALSE
+      AND LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      AND (
+           p.privacyLevel = 'PUBLIC'
+        OR (p.privacyLevel = 'FRIENDS' AND
+            EXISTS (
+                SELECT f FROM Friendship f
+                WHERE f.status = 'ACCEPTED'
+                  AND ((f.requester.id = :currentUser AND f.addressee.id = p.user.id)
+                    OR (f.addressee.id = :currentUser AND f.requester.id = p.user.id))
+            ))
+        OR (p.user.id = :currentUser)
+      )
+    ORDER BY p.createdAt DESC
+    """)
+    Page<com.codegym.socialmedia.model.social_action.Post> searchVisiblePosts(
+        @Param("keyword") String keyword,
+        @Param("currentUser") Long currentUser,
+        Pageable pageable);
 
 
     // 8. Find posts by user list (for friends' posts) - THÊM METHOD NÀY
@@ -119,7 +141,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<String> findPublicPhotos(@Param("profileOwner") User profileOwner);
 
     // Lấy ảnh theo phân quyền (public, friends, chính chủ)
-    @Query("SELECT p.imageUrls FROM Post p " +
+    @Query("SELECT DISTINCT p.imageUrls FROM Post p " +
             "LEFT JOIN Friendship f ON ((f.requester = :viewer AND f.addressee = p.user) " +
             "OR (f.addressee = :viewer AND f.requester = p.user)) " +
             "WHERE p.user = :profileOwner " +
@@ -130,4 +152,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "     OR p.user = :viewer)")
     List<String> findVisiblePhotos(@Param("profileOwner") User profileOwner,
                                    @Param("viewer") User viewer);
+
+    // Batch query: đếm likes cho nhiều posts cùng lúc, tránh N+1
+    @Query("SELECT p.id, COUNT(lp) FROM Post p LEFT JOIN LikePost lp ON lp.post = p WHERE p IN :posts GROUP BY p.id")
+    List<Object[]> countLikesByPosts(@Param("posts") List<Post> posts);
+
+    // Batch query: đếm comments cho nhiều posts cùng lúc, tránh N+1
+    @Query("SELECT p.id, COUNT(c) FROM Post p LEFT JOIN PostComment c ON c.post = p WHERE p IN :posts GROUP BY p.id")
+    List<Object[]> countCommentsByPosts(@Param("posts") List<Post> posts);
 }

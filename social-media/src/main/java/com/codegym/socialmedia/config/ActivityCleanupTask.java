@@ -1,6 +1,8 @@
 package com.codegym.socialmedia.config;
 
 import com.codegym.socialmedia.service.user.UserActivityService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Component;
 @EnableScheduling
 public class ActivityCleanupTask {
 
+    private static final Logger log = LoggerFactory.getLogger(ActivityCleanupTask.class);
+
     @Autowired
     private UserActivityService userActivityService;
 
@@ -18,9 +22,9 @@ public class ActivityCleanupTask {
     public void cleanupOldActivity() {
         try {
             userActivityService.cleanup();
-            System.out.println("🧹 Cleaned up old activity data");
+            log.info("Cleaned up old activity data");
         } catch (Exception e) {
-            System.err.println("❌ Error during activity cleanup: " + e.getMessage());
+            log.error("Error during activity cleanup: " + e.getMessage());
         }
     }
 
@@ -29,9 +33,9 @@ public class ActivityCleanupTask {
     public void logOnlineStats() {
         try {
             int onlineCount = userActivityService.getOnlineUsers().size();
-            System.out.println("📊 Online users: " + onlineCount);
+            log.info("Online users: " + onlineCount);
         } catch (Exception e) {
-            System.err.println("❌ Error logging online stats: " + e.getMessage());
+            log.error("Error logging online stats: " + e.getMessage());
         }
     }
 }

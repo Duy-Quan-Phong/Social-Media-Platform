@@ -10,6 +10,8 @@ import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.user.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -37,6 +39,8 @@ import java.util.*;
 
 @Controller
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     @Autowired
     private ChatService chatService;
@@ -367,6 +371,29 @@ public class ChatController {
     }
 
 
+    @MessageMapping("/chat/typing")
+    public void handleTyping(SimpMessageHeaderAccessor headerAccessor, @Payload Map<String, Object> payload) {
+        try {
+            User sender = getCurrentUser(headerAccessor);
+            Long conversationId = Long.valueOf(payload.get("conversationId").toString());
+            boolean isTyping = Boolean.parseBoolean(payload.get("isTyping").toString());
+
+            boolean inConversation = conversationParticipantRepository
+                    .findByConversationIdAndUserId(conversationId, sender.getId())
+                    .isPresent();
+            if (!inConversation) return;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", sender.getId());
+            response.put("senderName", sender.getFirstName() + " " + sender.getLastName());
+            response.put("isTyping", isTyping);
+
+            messagingTemplate.convertAndSend("/topic/conversation/" + conversationId + "/typing", response);
+        } catch (Exception e) {
+            // Silently ignore typing errors
+        }
+    }
+
     @MessageMapping("/endCall")
     public void endCall(RejectPayload signal) {
         Long conversationId = signal.getConversationId();
@@ -457,7 +484,7 @@ public class ChatController {
             );
 
         } catch (Exception e) {
-            System.err.println("Error handling @everyone mention: " + e.getMessage());
+            log.error("Error handling @everyone mention: " + e.getMessage());
         }
     }
 

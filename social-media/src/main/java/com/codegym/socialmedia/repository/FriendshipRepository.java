@@ -17,7 +17,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
     //  Lấy danh sách User chưa kết bạn (không có Friendship hoặc status != ACCEPTED)
     @Query("""
-                SELECT u
+                SELECT DISTINCT u
                 FROM User u
                 WHERE u.id != :currentUserId
                 AND u.id NOT IN (
@@ -35,7 +35,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
     //  Lấy danh sách User mà currentUserId đã gửi lời mời kết bạn (PENDING, currentUserId là requester)
     @Query("""
-                SELECT u
+                SELECT DISTINCT u
                 FROM User u
                 WHERE u.id IN (
                     SELECT f.addressee.id
@@ -47,7 +47,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
     //  Lấy danh sách User đã gửi lời mời kết bạn đến currentUserId (PENDING, currentUserId là addressee)
     @Query("""
-                SELECT u
+                SELECT DISTINCT u
                 FROM User u
                 WHERE u.id IN (
                     SELECT f.requester.id
@@ -59,7 +59,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
 
     @Query("""
-            SELECT u FROM User u
+            SELECT DISTINCT u FROM User u
             WHERE u.id IN (
                 SELECT f.requester.id FROM Friendship f
                 WHERE f.status = 'ACCEPTED'
@@ -76,7 +76,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
                                                 @Param("viewerId") Long viewerId, Pageable pageable);
 
     @Query("""
-    SELECT u FROM User u
+    SELECT DISTINCT u FROM User u
     JOIN u.privacySettings ps
     WHERE u.id IN (
         SELECT f.requester.id FROM Friendship f
@@ -114,7 +114,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
 
     @Query("""
-                SELECT u
+                SELECT DISTINCT u
                 FROM User u
                 WHERE u.id IN (
                     SELECT f1.requester.id

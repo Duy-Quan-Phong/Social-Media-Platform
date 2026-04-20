@@ -38,7 +38,6 @@ public class PostMessage {
         payload.put("likeCount", likeCount);
         payload.put("likedByCurrentUser", isLiked);
         payload.put("userName", userName);
-        System.out.println(payload);
         // Gửi đến tất cả client đang theo dõi comment này
         messagingTemplate.convertAndSend("/topic/comments/" + commentId + "/likes", payload);
     }

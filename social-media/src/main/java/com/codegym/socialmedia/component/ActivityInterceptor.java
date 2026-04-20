@@ -3,6 +3,8 @@ package com.codegym.socialmedia.component;
 import com.codegym.socialmedia.service.user.UserActivityService;
 import com.codegym.socialmedia.service.user.UserService;
 import com.codegym.socialmedia.model.account.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -12,6 +14,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class ActivityInterceptor implements HandlerInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(ActivityInterceptor.class);
 
     @Autowired
     private UserActivityService userActivityService;
@@ -29,7 +33,7 @@ public class ActivityInterceptor implements HandlerInterceptor {
             }
         } catch (Exception e) {
             // Không throw exception để không ảnh hưởng request chính
-            System.err.println("Error tracking user activity: " + e.getMessage());
+            log.error("Error tracking user activity: " + e.getMessage());
         }
 
         return true;

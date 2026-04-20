@@ -20,7 +20,7 @@ public interface ConversationParticipantRepository extends JpaRepository<Convers
     """)
     List<ConversationParticipant> findByConversationId(@Param("conversationId") Long conversationId);
 
-    @Query("SELECT c FROM Conversation c JOIN FETCH c.participants WHERE c.id = :id")
+    @Query("SELECT DISTINCT c FROM Conversation c JOIN FETCH c.participants WHERE c.id = :id")
     Optional<Conversation> findByIdWithParticipants(@Param("id") Long id);
     List<ConversationParticipant> findByUserId(Long userId);
     Optional<ConversationParticipant> findByConversationIdAndUserId(Long conversationId, Long userId);

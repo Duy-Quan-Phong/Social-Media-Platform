@@ -40,6 +40,7 @@ public class FriendshipServiceImpl implements FriendshipService {
     private NotificationService notificationService;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private ChatService chatService;
 
     @Override

@@ -1,5 +1,7 @@
 package com.codegym.socialmedia.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,6 +16,8 @@ import java.security.Principal;
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private static final Logger log = LoggerFactory.getLogger(WebSocketConfig.class);
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws").withSockJS();
@@ -29,9 +33,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void handleSessionConnected(SessionConnectEvent event) {
         Principal principal = event.getUser();
         if (principal != null) {
-            System.out.println("✅ WebSocket connected: " + principal.getName());
+            log.info("WebSocket connected: " + principal.getName());
         } else {
-            System.out.println("⚠️ WebSocket connected: principal = null");
+            log.info("WebSocket connected: principal = null");
         }
     }
 
@@ -39,7 +43,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void handleSessionDisconnect(SessionDisconnectEvent event) {
         Principal principal = event.getUser();
         if (principal != null) {
-            System.out.println("❌ WebSocket disconnected: " + principal.getName());
+            log.info("WebSocket disconnected: " + principal.getName());
         }
     }
 }

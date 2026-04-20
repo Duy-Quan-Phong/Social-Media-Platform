@@ -36,9 +36,10 @@ public class PostDisplayDto {
     private int likesCount;
     private int commentsCount;
     private boolean isLikedByCurrentUser;
-    private boolean canEdit; // User có thể edit post này không
-    private boolean canDelete; // User có thể delete post này không
-    private boolean canComment; // User có thể comment post này không
+    private boolean isSavedByCurrentUser;
+    private boolean canEdit;
+    private boolean canDelete;
+    private boolean canComment;
 
     public PostDisplayDto(Post post, boolean isLikedByCurrentUser, boolean canEdit, boolean canDelete) {
         this.id = post.getId();

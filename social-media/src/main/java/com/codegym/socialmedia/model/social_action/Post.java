@@ -11,7 +11,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = {
+        @Index(name = "idx_post_user_created", columnList = "user_id, created_at DESC"),
+        @Index(name = "idx_post_user_deleted", columnList = "user_id, is_deleted, created_at DESC"),
+        @Index(name = "idx_post_privacy_deleted", columnList = "privacy_level, is_deleted, created_at DESC")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

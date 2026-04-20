@@ -3,6 +3,8 @@ package com.codegym.socialmedia.config;
 import com.codegym.socialmedia.service.user.UserActivityService;
 import com.codegym.socialmedia.service.user.UserService;
 import com.codegym.socialmedia.model.account.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -20,6 +22,8 @@ import java.security.Principal;
 @Component
 public class WebSocketActivityListener {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSocketActivityListener.class);
+
     @Autowired
     private UserActivityService userActivityService;
 
@@ -34,11 +38,11 @@ public class WebSocketActivityListener {
                 User user = getUserFromPrincipal(principal);
                 if (user != null) {
                     userActivityService.updateActivity(user.getId());
-                    System.out.println("✅ User " + user.getUsername() + " connected and marked as online");
+                    log.info("User " + user.getUsername() + " connected and marked as online");
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error handling connect event: " + e.getMessage());
+            log.error("Error handling connect event: " + e.getMessage());
         }
     }
 
@@ -50,11 +54,11 @@ public class WebSocketActivityListener {
                 User user = getUserFromPrincipal(principal);
                 if (user != null) {
                     userActivityService.setUserOffline(user.getId());
-                    System.out.println("❌ User " + user.getUsername() + " disconnected and marked as offline");
+                    log.info("User " + user.getUsername() + " disconnected and marked as offline");
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error handling disconnect event: " + e.getMessage());
+            log.error("Error handling disconnect event: " + e.getMessage());
         }
     }
 
@@ -70,7 +74,7 @@ public class WebSocketActivityListener {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error handling subscribe event: " + e.getMessage());
+            log.error("Error handling subscribe event: " + e.getMessage());
         }
     }
 
@@ -90,7 +94,7 @@ public class WebSocketActivityListener {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error getting user from principal: " + e.getMessage());
+            log.error("Error getting user from principal: " + e.getMessage());
         }
         return null;
     }
