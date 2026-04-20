@@ -31,10 +31,6 @@ public interface PostService {
     boolean toggleSavePost(Long postId, User user);
     Page<PostDisplayDto> getSavedPosts(User user, Pageable pageable);
 
-    // Save/Bookmark functionality
-    boolean toggleSavePost(Long postId, User user);
-    Page<PostDisplayDto> getSavedPosts(User user, Pageable pageable);
-
     // Like functionality
     boolean toggleLike(Long postId, User user);
 

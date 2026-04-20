@@ -164,11 +164,4 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<String> findVisiblePhotos(@Param("profileOwner") User profileOwner,
                                    @Param("viewer") User viewer);
 
-    // Batch query: đếm likes cho nhiều posts cùng lúc, tránh N+1
-    @Query("SELECT p.id, COUNT(lp) FROM Post p LEFT JOIN LikePost lp ON lp.post = p WHERE p IN :posts GROUP BY p.id")
-    List<Object[]> countLikesByPosts(@Param("posts") List<Post> posts);
-
-    // Batch query: đếm comments cho nhiều posts cùng lúc, tránh N+1
-    @Query("SELECT p.id, COUNT(c) FROM Post p LEFT JOIN PostComment c ON c.post = p WHERE p IN :posts GROUP BY p.id")
-    List<Object[]> countCommentsByPosts(@Param("posts") List<Post> posts);
 }
