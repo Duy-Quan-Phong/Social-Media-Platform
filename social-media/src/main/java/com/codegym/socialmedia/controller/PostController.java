@@ -7,6 +7,8 @@ import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostComment;
+import com.codegym.socialmedia.service.friend_ship.FriendshipService;
+import com.codegym.socialmedia.service.post.PollService;
 import com.codegym.socialmedia.service.post.PostService;
 import com.codegym.socialmedia.service.post.PostCommentService;
 import com.codegym.socialmedia.service.user.UserService;
@@ -27,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 @RequestMapping("/posts")
@@ -40,6 +43,15 @@ public class PostController {
 
     @Autowired
     private PostCommentService commentService;
+
+    @Autowired
+    private FriendshipService friendshipService;
+
+    @Autowired
+    private PollService pollService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
     // LOẠI BỎ: @Autowired private PostRepository postRepository;
     // LOẠI BỎ: (tạm thời vì chưa implement)
 
@@ -82,7 +94,9 @@ public class PostController {
 
     @PostMapping("/create")
     public String createPost(@Valid @ModelAttribute PostCreateDto dto,
-                             BindingResult result, @RequestParam(value = "redirectUrl", required = false) String redirectUrl,
+                             BindingResult result,
+                             @RequestParam(value = "redirectUrl", required = false) String redirectUrl,
+                             @RequestParam(value = "pollJson", required = false) String pollJson,
                              RedirectAttributes redirectAttributes) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
@@ -95,7 +109,22 @@ public class PostController {
         }
 
         try {
-            postService.createPost(dto, currentUser);
+            Post post = postService.createPost(dto, currentUser);
+            if (pollJson != null && !pollJson.isBlank()) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> pollData = objectMapper.readValue(pollJson, Map.class);
+                    String question = (String) pollData.get("question");
+                    @SuppressWarnings("unchecked")
+                    List<String> options = (List<String>) pollData.get("options");
+                    int durationDays = pollData.get("durationDays") instanceof Number n ? n.intValue() : 7;
+                    java.time.LocalDateTime endsAt = durationDays > 0
+                            ? java.time.LocalDateTime.now().plusDays(durationDays) : null;
+                    if (question != null && options != null && options.size() >= 2) {
+                        pollService.createPoll(post.getId(), question, options, endsAt);
+                    }
+                } catch (Exception ignored) {}
+            }
             redirectAttributes.addFlashAttribute("success", "Đăng bài thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
@@ -263,21 +292,25 @@ public class PostController {
 
     @GetMapping("/api/user/{username}/photos")
     @ResponseBody
-    public ResponseEntity<List<Map<String, String>>> getUserPhotos(@PathVariable String username) {
+    public ResponseEntity<List<Map<String, String>>> getUserPhotos(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "30") int size) {
         User targetUser = userService.getUserByUsername(username);
         if (targetUser == null) {
             return ResponseEntity.notFound().build();
         }
 
+        int safeSize = Math.min(size, 50);
         User currentUser = userService.getCurrentUser();
 
         try {
-            // Get all posts with images
+            // Get posts with images
             Page<PostDisplayDto> posts;
             if (currentUser != null) {
-                posts = postService.getPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
+                posts = postService.getPostsByUser(targetUser, currentUser, PageRequest.of(page, safeSize));
             } else {
-                posts = postService.getPublicPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
+                posts = postService.getPublicPostsByUser(targetUser, currentUser, PageRequest.of(page, safeSize));
             }
 
             // Extract all images from posts
@@ -317,6 +350,40 @@ public class PostController {
             response.put("success", true);
             response.put("isLiked", isLiked);
             response.put("message", isLiked ? "Đã thích" : "Đã bỏ thích");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Có lỗi xảy ra: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PostMapping("/api/react/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> toggleReaction(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        Map<String, Object> response = new HashMap<>();
+        User currentUser = userService.getCurrentUser();
+
+        if (currentUser == null) {
+            response.put("success", false);
+            response.put("message", "Vui lòng đăng nhập");
+            return ResponseEntity.status(401).body(response);
+        }
+
+        String reactionType = body.get("reactionType");
+        if (reactionType == null || reactionType.isBlank()) {
+            response.put("success", false);
+            response.put("message", "Loại cảm xúc không hợp lệ");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            String newReaction = postService.toggleReaction(id, currentUser, reactionType);
+            response.put("success", true);
+            response.put("newReaction", newReaction);
+            response.put("isLiked", newReaction != null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
@@ -444,4 +511,60 @@ public class PostController {
         return "saved-posts";
     }
 
+    // ── Share post ────────────────────────────────────────────────────────────
+
+    @PostMapping("/api/share/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> sharePost(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) return ResponseEntity.status(401).build();
+
+        try {
+            String comment = body != null ? body.getOrDefault("comment", "") : "";
+            Post shared = postService.sharePost(id, currentUser, comment);
+            PostDisplayDto dto = postService.getPostById(shared.getId(), currentUser);
+            return ResponseEntity.ok(Map.of("success", true, "post", dto));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    // ── Friend suggestions endpoint ───────────────────────────────────────────
+
+    @GetMapping("/api/suggestions/friends")
+    @ResponseBody
+    public ResponseEntity<?> friendSuggestions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(friendshipService.getFriendSuggestions(
+                currentUser.getId(), page, Math.min(size, 10)));
+    }
+
+    // ── Hashtag endpoints ─────────────────────────────────────────────────────
+
+    @GetMapping("/api/search/global")
+    @ResponseBody
+    public ResponseEntity<?> globalSearch(
+            @RequestParam("q") String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User currentUser = userService.getCurrentUser();
+        Pageable pageable = PageRequest.of(page, Math.min(size, 20));
+        if (q.startsWith("#")) {
+            String tag = q.substring(1);
+            return ResponseEntity.ok(postService.getPostsByHashtag(tag, currentUser, pageable));
+        }
+        return ResponseEntity.ok(postService.searchPublicPosts(q, currentUser, pageable));
+    }
+
+    @GetMapping("/api/trending-hashtags")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> trendingHashtags(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(postService.getTrendingHashtags(Math.min(limit, 20)));
+    }
 }

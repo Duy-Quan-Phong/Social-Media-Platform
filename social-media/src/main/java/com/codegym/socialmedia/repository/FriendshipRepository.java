@@ -167,6 +167,39 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
 
     @Query("SELECT f FROM Friendship f WHERE ((f.requester = :a AND f.addressee = :b) OR (f.requester = :b AND f.addressee = :a))")
     Optional<Friendship> findFriendshipBetween(@Param("a") User a, @Param("b") User b);
+
+    // Friend suggestions: users with mutual friends but no existing relationship
+    @Query("""
+        SELECT DISTINCT u FROM User u
+        WHERE u.id != :currentUserId
+        AND u.id NOT IN (
+            SELECT f.requester.id FROM Friendship f WHERE f.addressee.id = :currentUserId
+            UNION
+            SELECT f.addressee.id FROM Friendship f WHERE f.requester.id = :currentUserId
+        )
+        AND u.id IN (
+            SELECT f1.requester.id FROM Friendship f1
+            WHERE f1.status = 'ACCEPTED'
+              AND f1.addressee.id IN (
+                  SELECT f2.requester.id FROM Friendship f2
+                  WHERE f2.addressee.id = :currentUserId AND f2.status = 'ACCEPTED'
+                  UNION
+                  SELECT f2.addressee.id FROM Friendship f2
+                  WHERE f2.requester.id = :currentUserId AND f2.status = 'ACCEPTED'
+              )
+            UNION
+            SELECT f1.addressee.id FROM Friendship f1
+            WHERE f1.status = 'ACCEPTED'
+              AND f1.requester.id IN (
+                  SELECT f2.requester.id FROM Friendship f2
+                  WHERE f2.addressee.id = :currentUserId AND f2.status = 'ACCEPTED'
+                  UNION
+                  SELECT f2.addressee.id FROM Friendship f2
+                  WHERE f2.requester.id = :currentUserId AND f2.status = 'ACCEPTED'
+              )
+        )
+    """)
+    Page<User> findFriendSuggestions(@Param("currentUserId") Long currentUserId, Pageable pageable);
     @Query("""
     SELECT u
     FROM User u

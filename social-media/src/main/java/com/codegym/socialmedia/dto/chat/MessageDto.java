@@ -29,5 +29,11 @@ public class MessageDto {
     private boolean isRead;
 
     private String type;  // Added for JS compatibility (e.g., primary type: TEXT, IMAGE, etc.)
+
+    private boolean recalled;
+    private boolean deleted;
+    private String callStatus;
+    private Integer callDuration;
+    private boolean readByOther;  // for read receipts on own messages
 }
 

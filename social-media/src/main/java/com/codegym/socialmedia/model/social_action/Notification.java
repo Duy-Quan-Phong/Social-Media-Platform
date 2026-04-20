@@ -49,7 +49,9 @@ public class Notification {
         COMMENT_POST,
         REPLY_COMMENT,
         FRIEND_REQUEST,
-        MENTION_COMMENT
+        MENTION_COMMENT,
+        SHARED_POST,
+        POLL_VOTE
     }
 }
 

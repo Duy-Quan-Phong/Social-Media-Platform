@@ -9,16 +9,17 @@
         </h3>
         <form method="post" th:action="@{/posts/create}" id="create-post-form" enctype="multipart/form-data">
             <input type="hidden" name="redirectUrl" id="redirectUrl"/>
+            <input type="hidden" name="pollJson" id="poll-json"/>
             <script>
                 document.getElementById("redirectUrl").value = window.location.pathname;
             </script>
             <div class="post-creator-header">
                 <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                      th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
-                     class="creator-avatar">
+                     class="creator-avatar" loading="lazy">
                 <img th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                      th:src="@{/images/default-avatar.jpg}" alt="Avatar"
-                     class="creator-avatar">
+                     class="creator-avatar" loading="lazy">
 
                 <div class="creator-info d-flex  gap-5">
                     <span>
@@ -48,18 +49,72 @@
                 <div id="image-preview-list" class="image-preview-list"></div>
             </div>
 
+            <!-- Poll creator (hidden by default) -->
+            <div id="poll-creator" style="display:none;margin:8px 0;padding:12px;background:#f0f2f5;border-radius:8px">
+                <p style="font-weight:600;margin:0 0 8px;font-size:.9rem"><i class="fas fa-poll"></i> Tạo cuộc thăm dò</p>
+                <input type="text" id="poll-question" placeholder="Câu hỏi thăm dò..."
+                       style="width:100%;border:1px solid #e4e6eb;border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:.9rem">
+                <div id="poll-options-container">
+                    <input type="text" class="poll-option-input" placeholder="Lựa chọn 1"
+                           style="width:100%;border:1px solid #e4e6eb;border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:.85rem">
+                    <input type="text" class="poll-option-input" placeholder="Lựa chọn 2"
+                           style="width:100%;border:1px solid #e4e6eb;border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:.85rem">
+                </div>
+                <button type="button" onclick="addPollOption()"
+                        style="background:none;border:1px dashed #1877f2;color:#1877f2;border-radius:6px;padding:4px 12px;font-size:.8rem;cursor:pointer;margin-top:4px">
+                    + Thêm lựa chọn
+                </button>
+                <select id="poll-duration" style="margin-top:8px;width:100%;border:1px solid #e4e6eb;border-radius:6px;padding:6px 10px;font-size:.85rem">
+                    <option value="1">Kết thúc sau 1 ngày</option>
+                    <option value="3">Kết thúc sau 3 ngày</option>
+                    <option value="7" selected>Kết thúc sau 7 ngày</option>
+                    <option value="0">Không giới hạn</option>
+                </select>
+            </div>
+
             <div class="post-options">
                 <div class="post-actions-left">
                     <label for="image-input" class="action-btn">
                         <i class="fas fa-photo-video"></i> Ảnh / Video
                     </label>
                     <input type="file" id="image-input" name="images" accept="image/*,video/*" multiple style="display:none;">
+                    <button type="button" class="action-btn" onclick="togglePollCreator()" title="Thêm cuộc thăm dò">
+                        <i class="fas fa-poll"></i> Thăm dò
+                    </button>
                 </div>
                 <button type="submit" class="btn btn-primary post-btn" id="post-submit-btn" disabled>
                     <i class="fas fa-paper-plane"></i> Đăng
                 </button>
             </div>
         </form>
+        <script>
+        function togglePollCreator() {
+            const el = document.getElementById('poll-creator');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+        function addPollOption() {
+            const count = document.querySelectorAll('.poll-option-input').length + 1;
+            if (count > 6) return;
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'poll-option-input';
+            inp.placeholder = `Lựa chọn ${count}`;
+            inp.style.cssText = 'width:100%;border:1px solid #e4e6eb;border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:.85rem';
+            document.getElementById('poll-options-container').appendChild(inp);
+        }
+        document.getElementById('create-post-form').addEventListener('submit', function() {
+            const pollEl = document.getElementById('poll-creator');
+            if (pollEl && pollEl.style.display !== 'none') {
+                const question = document.getElementById('poll-question').value.trim();
+                const options = Array.from(document.querySelectorAll('.poll-option-input'))
+                    .map(i => i.value.trim()).filter(Boolean);
+                const durationDays = parseInt(document.getElementById('poll-duration').value);
+                if (question && options.length >= 2) {
+                    document.getElementById('poll-json').value = JSON.stringify({question, options, durationDays});
+                }
+            }
+        });
+        </script>
     </div>
 </div>
 

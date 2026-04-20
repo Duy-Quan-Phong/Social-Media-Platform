@@ -23,7 +23,7 @@
             <div class="avatar">
                 <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                      th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
-                     class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                     class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;" loading="lazy">
                 <span th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
                       th:text="${#strings.substring(#authentication.name, 0, 1).toUpperCase()}">U</span>
             </div>
@@ -61,23 +61,24 @@
 
     <!-- Main Feed -->
     <div class="feed">
-        <!-- Post Creator -->
-        <div th:replace="fragments/post/post-form :: create-post-form"></div>
-        <!-- Skeleton Loading (hiện khi chờ load lần đầu) -->
-        <div id="skeleton-container">
-            <div class="skeleton-post" th:each="i : ${#numbers.sequence(1,3)}">
-                <div class="skeleton-header">
-                    <div class="skeleton-avatar"></div>
-                    <div class="skeleton-lines">
-                        <div class="skeleton-line short"></div>
-                        <div class="skeleton-line xshort"></div>
-                    </div>
-                </div>
-                <div class="skeleton-line full mt-2"></div>
-                <div class="skeleton-line medium mt-1"></div>
-                <div class="skeleton-image mt-2"></div>
+        <!-- Stories Bar -->
+        <div id="stories-bar" class="stories-bar">
+            <div class="story-card story-add" onclick="document.getElementById('story-upload-input').click()">
+                <div class="story-add-icon"><i class="fas fa-plus"></i></div>
+                <span>Thêm story</span>
+                <input type="file" id="story-upload-input" accept="image/*,video/*" style="display:none" onchange="uploadStory(this)">
             </div>
         </div>
+
+        <!-- Post Creator -->
+        <div th:replace="fragments/post/post-form :: create-post-form"></div>
+
+        <!-- Friend Suggestions Widget -->
+        <div id="friend-suggestions-widget" style="display:none;background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+            <h5 style="margin:0 0 12px;font-size:.95rem;color:#65676b"><i class="fas fa-user-plus"></i> Gợi ý kết bạn</h5>
+            <div id="suggestions-list" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+        </div>
+
         <!-- Posts Feed -->
         <div id="posts-container">
             <!-- Posts will be loaded here dynamically -->
@@ -109,6 +110,11 @@
                 <i class="fas fa-spinner fa-spin"></i> Đang tải...
             </div>
         </div>
+        <hr class="divider">
+        <h5><i class="fas fa-hashtag"></i> Xu hướng</h5>
+        <div id="trending-hashtags-list">
+            <div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
+        </div>
     </div>
 </div>
 
@@ -118,6 +124,156 @@
 
 <script type="module" th:src="@{/js/post.js}"></script>
 <script th:src="@{/js/activity-tracker.js}"></script>
+<script>
+// ── Stories ──────────────────────────────────────────────────────────────────
+async function loadStories() {
+    try {
+        const res = await fetch('/api/stories/feed');
+        const groups = await res.json();
+        const bar = document.getElementById('stories-bar');
+        groups.forEach(g => {
+            const card = document.createElement('div');
+            card.className = 'story-card';
+            card.innerHTML = `
+                <img src="${g.userAvatarUrl || '/images/default-avatar.jpg'}" class="story-avatar" loading="lazy">
+                <span>${escapeHtml(g.userFullName)}</span>`;
+            card.onclick = () => openStoryViewer(g);
+            bar.insertBefore(card, bar.querySelector('.story-add'));
+        });
+    } catch(e) { console.error('Stories load failed', e); }
+}
+
+function openStoryViewer(group) {
+    let idx = 0;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center';
+    const render = () => {
+        const s = group.stories[idx];
+        overlay.innerHTML = `
+            <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer"><i class="fas fa-times"></i></button>
+            <button onclick="prev()" style="position:absolute;left:16px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer"><i class="fas fa-chevron-left"></i></button>
+            ${s.mediaType === 'VIDEO'
+                ? `<video src="${s.mediaUrl}" autoplay style="max-height:85vh;max-width:90vw;border-radius:8px" controls></video>`
+                : `<img src="${s.mediaUrl}" style="max-height:85vh;max-width:90vw;border-radius:8px" loading="lazy">`}
+            ${s.caption ? `<p style="position:absolute;bottom:40px;color:#fff;font-size:1rem;text-align:center;padding:0 24px">${escapeHtml(s.caption)}</p>` : ''}
+            <button onclick="next()" style="position:absolute;right:16px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer"><i class="fas fa-chevron-right"></i></button>
+            <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);color:#fff;font-size:.85rem">${idx+1} / ${group.stories.length}</div>`;
+        fetch('/api/stories/' + s.id + '/view', {method:'POST'}).catch(() => {});
+    };
+    function prev() { if(idx>0){idx--;render();} }
+    function next() { if(idx<group.stories.length-1){idx++;render();} else overlay.remove(); }
+    overlay.prev = prev; overlay.next = next;
+    document.body.appendChild(overlay);
+    render();
+}
+
+async function uploadStory(input) {
+    const file = input.files[0]; if (!file) return;
+    const caption = prompt('Chú thích (tùy chọn):') || '';
+    const fd = new FormData();
+    fd.append('media', file);
+    fd.append('caption', caption);
+    try {
+        const res = await fetch('/api/stories', {method:'POST', body:fd,
+            headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content || ''}});
+        if (res.ok) { location.reload(); }
+    } catch(e) { alert('Tải story thất bại'); }
+}
+
+// ── Friend suggestions ────────────────────────────────────────────────────────
+async function loadFriendSuggestions() {
+    try {
+        const res = await fetch('/posts/api/suggestions/friends?size=6');
+        const data = await res.json();
+        if (!data.content || data.content.length === 0) return;
+        const widget = document.getElementById('friend-suggestions-widget');
+        const list   = document.getElementById('suggestions-list');
+        widget.style.display = 'block';
+        data.content.forEach(f => {
+            const card = document.createElement('div');
+            card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;min-width:90px;padding:8px;border-radius:8px;background:#f0f2f5;cursor:pointer';
+            card.innerHTML = `
+                <img src="${f.avatarUrl || '/images/default-avatar.jpg'}" style="width:56px;height:56px;border-radius:50%;object-fit:cover" loading="lazy">
+                <span style="font-size:.8rem;font-weight:600;text-align:center">${escapeHtml(f.fullName)}</span>
+                <span style="font-size:.72rem;color:#65676b">${f.mutualFriends} bạn chung</span>
+                <button onclick="addFriend('${f.username}',this)" style="background:#1877f2;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.8rem;cursor:pointer">Kết bạn</button>`;
+            list.appendChild(card);
+        });
+    } catch(e) {}
+}
+
+async function addFriend(username, btn) {
+    btn.disabled = true;
+    try {
+        const csrf = document.querySelector('meta[name="_csrf"]')?.content || '';
+        await fetch('/friendship/add/' + username, {method:'POST', headers:{'X-CSRF-TOKEN':csrf}});
+        btn.textContent = 'Đã gửi';
+        btn.style.background = '#65676b';
+    } catch(e) { btn.disabled = false; }
+}
+
+// ── Infinite scroll ───────────────────────────────────────────────────────────
+let _feedPage = 0, _feedLoading = false, _feedHasMore = true;
+
+async function loadMoreFeedPosts() {
+    if (_feedLoading || !_feedHasMore) return;
+    _feedLoading = true;
+    document.getElementById('loading-indicator').style.display = 'block';
+    try {
+        const res  = await fetch(`/posts/api/feed?page=${_feedPage}&size=10`);
+        const page = await res.json();
+        if (page.content && page.content.length > 0) {
+            const container = document.getElementById('posts-container');
+            page.content.forEach(post => {
+                const el = window.postManager?.renderPost(post);
+                if (el) container.appendChild(el);
+            });
+            _feedPage++;
+            _feedHasMore = !page.last;
+        } else {
+            _feedHasMore = false;
+        }
+    } catch(e) { console.error(e); }
+    finally {
+        _feedLoading = false;
+        document.getElementById('loading-indicator').style.display = 'none';
+        if (!_feedHasMore) document.getElementById('no-more-posts').style.display = 'block';
+    }
+}
+
+const _sentinel = document.createElement('div');
+_sentinel.id = 'scroll-sentinel';
+_sentinel.style.height = '10px';
+document.getElementById('posts-container')?.insertAdjacentElement('afterend', _sentinel);
+
+const _scrollObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) loadMoreFeedPosts();
+}, { threshold: 0.1 });
+
+async function loadTrendingHashtags() {
+    try {
+        const res = await fetch('/posts/api/trending-hashtags?limit=8');
+        const tags = await res.json();
+        const list = document.getElementById('trending-hashtags-list');
+        if (!list) return;
+        if (!tags.length) { list.innerHTML = '<p style="color:#65676b;font-size:.85rem;padding:4px 0">Chưa có xu hướng</p>'; return; }
+        list.innerHTML = tags.map(t =>
+            `<a href="/hashtag/${encodeURIComponent(t.name)}" class="hashtag-link" style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;text-decoration:none;color:#050505;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background=''">
+                <span style="color:#1877f2;font-weight:500">#${t.name}</span>
+                <span style="font-size:.78rem;color:#65676b">${t.count} bài</span>
+            </a>`
+        ).join('');
+    } catch(e) { console.error('Trending hashtags load failed', e); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadStories();
+    loadFriendSuggestions();
+    loadTrendingHashtags();
+    _scrollObserver.observe(_sentinel);
+    loadMoreFeedPosts();
+});
+</script>
 <script th:inline="javascript">
     /*<![CDATA[*/
     const currentUser = /*[[${#authentication.principal.username}]]*/ 'defaultUser';

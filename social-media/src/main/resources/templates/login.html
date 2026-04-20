@@ -26,10 +26,14 @@
             <input type="text" th:field="*{lastName}" placeholder="Họ">
             <span th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}" class="error-message"></span>
 
-            <input type="text" th:field="*{username}" placeholder="Tên đăng nhập *">
+            <input type="text" id="reg-username" th:field="*{username}" placeholder="Tên đăng nhập *"
+                   oninput="checkUsernameAvailability(this.value)">
+            <span id="username-feedback" style="font-size:12px;display:block;margin-top:-6px;margin-bottom:4px"></span>
             <span th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="error-message"></span>
 
-            <input type="email" th:field="*{email}" placeholder="Email *">
+            <input type="email" id="reg-email" th:field="*{email}" placeholder="Email *"
+                   oninput="checkEmailAvailability(this.value)">
+            <span id="email-feedback" style="font-size:12px;display:block;margin-top:-6px;margin-bottom:4px"></span>
             <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="error-message"></span>
 
             <input type="text" th:field="*{phone}" placeholder="Số điện thoại">
@@ -38,10 +42,17 @@
             <input type="date" th:field="*{dateOfBirth}" placeholder="Ngày sinh">
             <span th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}" class="error-message"></span>
 
-            <input type="password" th:field="*{password}" placeholder="Mật khẩu *">
+            <input type="password" id="reg-password" th:field="*{password}" placeholder="Mật khẩu *"
+                   oninput="checkRegPasswordStrength(this.value); checkRegPasswordMatch()">
+            <div id="reg-strength-bar" style="height:4px;border-radius:2px;margin:-6px 0 4px;background:#eee;display:none">
+                <div id="reg-strength-fill" style="height:100%;border-radius:2px;transition:width .3s,background .3s;width:0"></div>
+            </div>
+            <span id="reg-strength-text" style="font-size:12px;display:block;margin-top:-2px;margin-bottom:4px"></span>
             <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error-message"></span>
 
-            <input type="password" th:field="*{confirmPassword}" placeholder="Xác nhận mật khẩu *">
+            <input type="password" id="reg-confirm" th:field="*{confirmPassword}" placeholder="Xác nhận mật khẩu *"
+                   oninput="checkRegPasswordMatch()">
+            <span id="reg-match-text" style="font-size:12px;display:block;margin-top:-6px;margin-bottom:4px"></span>
             <span th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}" class="error-message"></span>
 
             <button type="submit">Đăng ký</button>
@@ -126,6 +137,87 @@
             }
         });
     });
+
+    // ── Password strength indicator ──────────────────────────
+    function checkRegPasswordStrength(val) {
+        const bar = document.getElementById('reg-strength-bar');
+        const fill = document.getElementById('reg-strength-fill');
+        const text = document.getElementById('reg-strength-text');
+        if (!val) { bar.style.display = 'none'; text.textContent = ''; return; }
+        bar.style.display = 'block';
+        let score = 0;
+        if (val.length >= 8)  score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+        const levels = [
+            { w: '25%', bg: '#e74c3c', label: 'Rất yếu' },
+            { w: '50%', bg: '#e67e22', label: 'Yếu' },
+            { w: '75%', bg: '#f1c40f', label: 'Trung bình' },
+            { w: '100%', bg: '#2ecc71', label: 'Mạnh' }
+        ];
+        const lv = levels[score - 1] || levels[0];
+        fill.style.width = lv.w;
+        fill.style.background = lv.bg;
+        text.textContent = lv.label;
+        text.style.color = lv.bg;
+    }
+
+    // ── Password match indicator ──────────────────────────────
+    function checkRegPasswordMatch() {
+        const pw = document.getElementById('reg-password')?.value || '';
+        const cf = document.getElementById('reg-confirm')?.value || '';
+        const el = document.getElementById('reg-match-text');
+        if (!cf) { el.textContent = ''; return; }
+        if (pw === cf) {
+            el.textContent = '✓ Mật khẩu khớp';
+            el.style.color = '#2ecc71';
+        } else {
+            el.textContent = '✗ Mật khẩu không khớp';
+            el.style.color = '#e74c3c';
+        }
+    }
+
+    // ── Availability checks (debounced) ──────────────────────
+    let usernameTimer, emailTimer;
+
+    function checkUsernameAvailability(val) {
+        clearTimeout(usernameTimer);
+        const el = document.getElementById('username-feedback');
+        if (!val || val.length < 3) { el.textContent = ''; return; }
+        usernameTimer = setTimeout(() => {
+            fetch('/api/check/username?value=' + encodeURIComponent(val))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.available) {
+                        el.textContent = '✓ Tên đăng nhập có thể sử dụng';
+                        el.style.color = '#2ecc71';
+                    } else {
+                        el.textContent = '✗ Tên đăng nhập đã tồn tại';
+                        el.style.color = '#e74c3c';
+                    }
+                }).catch(() => { el.textContent = ''; });
+        }, 500);
+    }
+
+    function checkEmailAvailability(val) {
+        clearTimeout(emailTimer);
+        const el = document.getElementById('email-feedback');
+        if (!val || !val.includes('@')) { el.textContent = ''; return; }
+        emailTimer = setTimeout(() => {
+            fetch('/api/check/email?value=' + encodeURIComponent(val))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.available) {
+                        el.textContent = '✓ Email có thể sử dụng';
+                        el.style.color = '#2ecc71';
+                    } else {
+                        el.textContent = '✗ Email đã được đăng ký';
+                        el.style.color = '#e74c3c';
+                    }
+                }).catch(() => { el.textContent = ''; });
+        }, 500);
+    }
 </script>
 </body>
 </html>

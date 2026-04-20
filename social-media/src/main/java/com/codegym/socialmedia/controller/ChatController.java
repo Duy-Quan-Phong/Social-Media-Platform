@@ -151,6 +151,11 @@ public class ChatController {
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
 
         Map<String, Object> res = new HashMap<>();
+        if (content != null && content.length() > 2000) {
+            res.put("success", false);
+            res.put("message", "Tin nhắn không được vượt quá 2000 ký tự");
+            return ResponseEntity.badRequest().body(res);
+        }
         try {
             Long me = userService.getCurrentUser().getId();
 
@@ -313,6 +318,108 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatHistory(userId1, userId2));
     }
 
+    // ── Message recall ───────────────────────────────────────────────────────
+
+    @PatchMapping("/api/chat/message/{id}/recall")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> recallMessage(@PathVariable Long id) {
+        Map<String, Object> res = new HashMap<>();
+        User me = userService.getCurrentUser();
+        if (me == null) return ResponseEntity.status(401).build();
+        try {
+            MessageDto dto = chatService.recallMessage(id, me.getId());
+            // broadcast the recalled message so all open windows update
+            messagingTemplate.convertAndSend("/topic/conversation/" + dto.getConversationId(), dto);
+            res.put("success", true);
+            res.put("message", dto);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    // ── Group management ─────────────────────────────────────────────────────
+
+    @PutMapping("/api/chat/group/{id}/rename")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> renameGroup(
+            @PathVariable Long id, @RequestBody Map<String, String> body) {
+        Map<String, Object> res = new HashMap<>();
+        User me = userService.getCurrentUser();
+        if (me == null) return ResponseEntity.status(401).build();
+        try {
+            String newName = body.getOrDefault("name", "").trim();
+            if (newName.isEmpty()) throw new RuntimeException("Tên nhóm không được để trống");
+            ConversationDto conv = chatService.renameGroup(id, me.getId(), newName);
+            res.put("success", true);
+            res.put("conversation", conv);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @DeleteMapping("/api/chat/group/{id}/members/{memberId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> removeParticipant(
+            @PathVariable Long id, @PathVariable Long memberId) {
+        Map<String, Object> res = new HashMap<>();
+        User me = userService.getCurrentUser();
+        if (me == null) return ResponseEntity.status(401).build();
+        try {
+            chatService.removeParticipant(id, me.getId(), memberId);
+            res.put("success", true);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/api/chat/group/{id}/leave")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> leaveGroup(@PathVariable Long id) {
+        Map<String, Object> res = new HashMap<>();
+        User me = userService.getCurrentUser();
+        if (me == null) return ResponseEntity.status(401).build();
+        try {
+            chatService.leaveGroup(id, me.getId());
+            res.put("success", true);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
+    @PostMapping("/api/chat/group/{id}/members")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> addParticipants(
+            @PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Map<String, Object> res = new HashMap<>();
+        User me = userService.getCurrentUser();
+        if (me == null) return ResponseEntity.status(401).build();
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> raw = (List<Integer>) body.get("userIds");
+            List<Long> ids = raw == null ? List.of() : raw.stream().map(Long::valueOf).toList();
+            ConversationDto conv = chatService.addParticipantsToGroup(id, me.getId(), ids);
+            res.put("success", true);
+            res.put("conversation", conv);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            res.put("success", false);
+            res.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(res);
+        }
+    }
+
 
     @Autowired
     private ConversationParticipantRepository conversationParticipantRepository;
@@ -398,30 +505,25 @@ public class ChatController {
     public void endCall(RejectPayload signal) {
         Long conversationId = signal.getConversationId();
         Long rejecterId = signal.getRejecterId();
-        // Lấy list participant từ conversation
+        int duration = signal.getDuration() != null ? signal.getDuration() : 0;
+
+        // Finalize call message with COMPLETED or MISSED status
+        String status = duration > 0 ? "COMPLETED" : "MISSED";
+        chatService.finalizeCallMessage(signal.getCallMessageId(), status, duration);
+
         List<User> participants = conversationParticipantRepository.findUsersByConversationId(conversationId);
-        messagingTemplate.convertAndSend(
-                "/topic/video/" + conversationId,
-                new SignalMessage("leave", rejecterId, null, null)
-        );
-        if (participants.size() == 2) {  // Call 1-1: Gửi đến tất cả để đóng
+        messagingTemplate.convertAndSend("/topic/video/" + conversationId,
+                new SignalMessage("leave", rejecterId, null, null));
+
+        if (participants.size() == 2) {
             for (User u : participants) {
-                messagingTemplate.convertAndSendToUser(
-                        u.getUsername(),
-                        "/queue/call-end",
-                        signal
-                );
+                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/call-end", signal);
             }
-        } else {  // Call nhóm: Chỉ gửi đến rejecter để chỉ họ thoát
-            User rejecter = participants.stream()
+        } else {
+            participants.stream()
                     .filter(u -> u.getId().equals(rejecterId))
                     .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Rejecter not found"));
-            messagingTemplate.convertAndSendToUser(
-                    rejecter.getUsername(),
-                    "/queue/call-end",
-                    signal
-            );
+                    .ifPresent(u -> messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/call-end", signal));
         }
     }
 
@@ -512,23 +614,28 @@ public class ChatController {
 
     @MessageMapping("/startCall")
     public void startCall(SimpMessageHeaderAccessor headerAccessor, @Payload VideoCallInvite videoCallInvite) {
-
         User caller = getCurrentUser(headerAccessor);
         Conversation conv = conversationParticipantRepository.findByIdWithParticipants(videoCallInvite.getConversationId())
                 .orElseThrow();
 
+        // Create a CALL message in the conversation for history
+        Long callMsgId = chatService.createCallMessage(conv.getId(), caller.getId());
+
         long callerId = caller.getId();
+        VideoCallInvite invite = new VideoCallInvite(
+                caller.getId(), conv.getId(),
+                caller.getFirstName() + " " + caller.getLastName(),
+                caller.getProfilePicture(), callMsgId);
+
         for (ConversationParticipant p : conv.getParticipants()) {
             if (!p.getUser().getId().equals(callerId)) {
-                String username = p.getUser().getUsername();
-                messagingTemplate.convertAndSendToUser(
-                        username,
-                        "/queue/call-invite",
-                        new VideoCallInvite(caller.getId(), conv.getId(),
-                                caller.getFirstName() + " " + caller.getLastName(), caller.getProfilePicture())
-                );
+                messagingTemplate.convertAndSendToUser(p.getUser().getUsername(), "/queue/call-invite", invite);
             }
         }
+
+        // Send callMessageId back to the caller via video topic so JS can store it
+        messagingTemplate.convertAndSend("/topic/video/" + conv.getId(),
+                new com.codegym.socialmedia.dto.chat.SignalMessage("call_started", caller.getId(), String.valueOf(callMsgId), null));
     }
 
     private User getUserFromAuthentication(Authentication auth) {

@@ -19,10 +19,10 @@
     <div class="avatar-container">
         <img class="avatar"
              th:if="${user.profilePicture != null and !#strings.isEmpty(user.profilePicture)}"
-             th:src="@{${user.profilePicture}}" alt="Avatar">
+             th:src="@{${user.profilePicture}}" alt="Avatar" loading="lazy">
         <img class="avatar"
              th:unless="${user.profilePicture != null and !#strings.isEmpty(user.profilePicture)}"
-             th:src="@{/images/default-avatar.jpg}" alt="Avatar">
+             th:src="@{/images/default-avatar.jpg}" alt="Avatar" loading="lazy">
         <div class="user-name" th:text="${user.firstName + ' ' + user.lastName}">Tên người dùng</div>
         <div class="button-group" th:if="${!isOwner}">
             <div th:insert="fragments/friend/friend-button-group :: buttonGroup(${user.username}, ${friendshipStatus}, ${isSender}, ${isReceiver}, ${allowFriendRequests},false)"></div>

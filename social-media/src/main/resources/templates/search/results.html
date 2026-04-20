@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Tìm kiếm: ' + ${q} + ' - Social Media'">Tìm kiếm</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/news-feed.css}">
+    <link rel="stylesheet" th:href="@{/css/post.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="main-container" style="max-width:800px;margin:80px auto;padding:0 16px">
+    <!-- Search form -->
+    <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <form action="/search" method="get" style="display:flex;gap:8px">
+            <input type="text" name="q" th:value="${q}" placeholder="Tìm kiếm bài viết, hashtag..."
+                   style="flex:1;border:1px solid #e4e6eb;border-radius:20px;padding:8px 16px;font-size:.95rem;outline:none">
+            <button type="submit"
+                    style="background:#1877f2;color:#fff;border:none;border-radius:20px;padding:8px 20px;cursor:pointer">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <div th:if="${q != null and !q.isBlank()}">
+        <h4 style="color:#65676b;margin-bottom:12px">
+            Kết quả cho "<strong th:text="${q}"></strong>"
+        </h4>
+
+        <!-- Post results rendered dynamically -->
+        <div id="post-list" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div id="load-sentinel" style="height:20px"></div>
+        <p id="no-more" style="text-align:center;color:#65676b;display:none">Không còn kết quả</p>
+        <p id="no-results" style="text-align:center;color:#65676b;display:none">Không tìm thấy kết quả nào</p>
+    </div>
+</div>
+
+<script type="module" th:src="@{/js/post.js}"></script>
+<script th:inline="javascript">
+    const SEARCH_Q = /*[[${q}]]*/ '';
+    let page = 0, loading = false, hasMore = true;
+
+    async function loadSearchResults() {
+        if (loading || !hasMore || !SEARCH_Q) return;
+        loading = true;
+        try {
+            const res = await fetch(`/api/search/posts?q=${encodeURIComponent(SEARCH_Q)}&page=${page}&size=10`);
+            const data = await res.json();
+            if (data.content && data.content.length > 0) {
+                data.content.forEach(post => {
+                    const el = window.postManager?.renderPost(post);
+                    if (el) document.getElementById('post-list').appendChild(el);
+                });
+                page++;
+                hasMore = !data.last;
+            } else {
+                hasMore = false;
+                if (page === 0) document.getElementById('no-results').style.display = 'block';
+            }
+        } catch(e) { console.error(e); }
+        finally { loading = false; }
+        if (!hasMore) document.getElementById('no-more').style.display = 'block';
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) loadSearchResults();
+    }, { threshold: 0.1 });
+
+    // Wait for postManager to be ready (it initializes after STOMP connect)
+    const waitForManager = setInterval(() => {
+        if (window.postManager) {
+            clearInterval(waitForManager);
+            loadSearchResults();
+            observer.observe(document.getElementById('load-sentinel'));
+        }
+    }, 100);
+</script>
+</body>
+</html>

@@ -13,7 +13,10 @@ import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.notification.NotificationService;
 import com.codegym.socialmedia.service.user.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +27,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class FriendshipServiceImpl implements FriendshipService {
 
@@ -68,7 +72,7 @@ public class FriendshipServiceImpl implements FriendshipService {
                     Notification.ReferenceType.FRIENDSHIP, user.getId());
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Friendship operation failed", e);
             return false;
         }
     }
@@ -76,6 +80,7 @@ public class FriendshipServiceImpl implements FriendshipService {
 
 
     @Override
+    @CacheEvict(value = "friendCounts", allEntries = true)
     public boolean acceptFriendship(User user) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null || user == null) {
@@ -95,12 +100,13 @@ public class FriendshipServiceImpl implements FriendshipService {
                 chatService.findOrCreatePrivateConversation(currentUser.getId(), user.getId());
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Friendship operation failed", e);
             return false;
         }
     }
 
     @Override
+    @CacheEvict(value = "friendCounts", allEntries = true)
     public boolean deleteFriendship(User user) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null || user == null) {
@@ -116,12 +122,13 @@ public class FriendshipServiceImpl implements FriendshipService {
             friendshipRepository.delete(friendship);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Friendship operation failed", e);
             return false;
         }
     }
 
     @Override
+    @Cacheable(value = "friendCounts", key = "'mutual:' + #userAId + ':' + #userBId")
     public int countMutualFriends(Long userAId, Long userBId) {
         return friendshipRepository.countMutualFriends(userAId, userBId);
     }
@@ -201,6 +208,7 @@ public class FriendshipServiceImpl implements FriendshipService {
     }
 
     @Override
+    @Cacheable(value = "friendCounts", key = "'friends:' + #userId")
     public int countFriends(Long userId) {
         return friendshipRepository.countFriendsByUserId(userId);
     }
@@ -288,6 +296,16 @@ public class FriendshipServiceImpl implements FriendshipService {
                     })
                     .collect(Collectors.toList());
 
+    }
+
+    @Override
+    public Page<FriendDto> getFriendSuggestions(Long currentUserId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<User> suggestions = friendshipRepository.findFriendSuggestions(currentUserId, pageable);
+        List<FriendDto> dtos = suggestions.getContent().stream()
+                .map(u -> new FriendDto(u, countMutualFriends(currentUserId, u.getId())))
+                .collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, suggestions.getTotalElements());
     }
 
     private String safeFullName(User u) {

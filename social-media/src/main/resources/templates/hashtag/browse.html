@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'#' + ${tag} + ' - Social Media'">Hashtag</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/news-feed.css}">
+    <link rel="stylesheet" th:href="@{/css/post.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="main-container" style="max-width:800px;margin:80px auto;padding:0 16px">
+    <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+        <h2 style="margin:0;font-size:1.6rem">
+            <span style="color:#1877f2">#</span><span th:text="${tag}"></span>
+        </h2>
+        <p style="color:#65676b;margin:4px 0 0" th:text="${posts.totalElements} + ' bài viết công khai'"></p>
+    </div>
+
+    <!-- Post list rendered by post.js -->
+    <div id="post-list" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div id="load-sentinel" style="height:20px"></div>
+    <p id="no-more" style="text-align:center;color:#65676b;display:none">Đã hết bài viết</p>
+</div>
+
+<script th:inline="javascript">
+    const HASHTAG = /*[[${tag}]]*/ '';
+    let page = 0;
+    let loading = false;
+    let hasMore = /*[[${posts.totalPages > 1}]]*/ true;
+
+    async function loadHashtagPosts() {
+        if (loading || !hasMore) return;
+        loading = true;
+        try {
+            const res = await fetch(`/posts/api/search/global?q=%23${encodeURIComponent(HASHTAG)}&page=${page}&size=10`);
+            const data = await res.json();
+            if (data.content && data.content.length > 0) {
+                data.content.forEach(post => {
+                    const el = window.postManager?.renderPost(post);
+                    if (el) document.getElementById('post-list').appendChild(el);
+                });
+                page++;
+                hasMore = !data.last;
+            } else {
+                hasMore = false;
+            }
+        } catch(e) { console.error(e); }
+        finally { loading = false; }
+        if (!hasMore) document.getElementById('no-more').style.display = 'block';
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) loadHashtagPosts();
+    }, { threshold: 0.1 });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHashtagPosts();
+        observer.observe(document.getElementById('load-sentinel'));
+    });
+</script>
+</body>
+</html>

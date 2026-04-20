@@ -6,7 +6,8 @@ public record NotificationDTO(
         String createdAt,
         Long referenceId,
         String referenceType,
-        SenderDTO sender
+        SenderDTO sender,
+        boolean isRead
 ) {
     public record SenderDTO(Long id, String username, String avatarUrl) {}
 }

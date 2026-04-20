@@ -140,6 +140,17 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             "AND p.imageUrls IS NOT NULL")
     List<String> findPublicPhotos(@Param("profileOwner") User profileOwner);
 
+    // Global public post search
+    @Query("SELECT p FROM Post p WHERE p.isDeleted = false AND p.privacyLevel = com.codegym.socialmedia.model.PrivacyLevel.PUBLIC AND LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) ORDER BY p.createdAt DESC")
+    Page<Post> searchPublicPosts(@Param("keyword") String keyword, Pageable pageable);
+
+    // Batch like/comment counts for a list of posts
+    @Query("SELECT p.id, COUNT(l) FROM LikePost l JOIN l.post p WHERE p IN :posts GROUP BY p.id")
+    List<Object[]> countLikesByPosts(@Param("posts") List<Post> posts);
+
+    @Query("SELECT p.id, COUNT(c) FROM PostComment c JOIN c.post p WHERE p IN :posts AND c.isDeleted = false GROUP BY p.id")
+    List<Object[]> countCommentsByPosts(@Param("posts") List<Post> posts);
+
     // Lấy ảnh theo phân quyền (public, friends, chính chủ)
     @Query("SELECT DISTINCT p.imageUrls FROM Post p " +
             "LEFT JOIN Friendship f ON ((f.requester = :viewer AND f.addressee = p.user) " +

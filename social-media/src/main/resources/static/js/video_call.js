@@ -5,6 +5,7 @@ let seconds = 0;
 let timerInterval;
 let isRinging = false;
 let baseStream; // stream gốc lấy từ camera/mic
+let callMessageId = null; // set after startCall confirms via call_started signal
 const localVideo = document.querySelector(".localVideo");
 const remoteVideo  = document.getElementById("remoteVideo");
 const timerElement = document.getElementById("timer");
@@ -145,9 +146,10 @@ document.querySelector('.end-call')?.addEventListener('click', () => {
     stopCallingTone();
     stompClient.send("/app/endCall", {}, JSON.stringify({
         conversationId: conversation_Id,
-        rejecterId: currentUserId
+        rejecterId: currentUserId,
+        callMessageId: callMessageId,
+        duration: seconds
     }));
-    // Đóng local ngay (nếu server chậm, hoặc an toàn)
     if (baseStream) {
         baseStream.getTracks().forEach(track => track.stop());
     }
@@ -197,6 +199,10 @@ function connect() {
         console.log("✅ Connected");
         stompClient.subscribe(`/topic/video/${conversation_Id}`, (message) => {
             const signal = JSON.parse(message.body);
+            if (signal.type === 'call_started') {
+                callMessageId = Number(signal.data);
+                return;
+            }
             handleSignal(signal);
         });
 

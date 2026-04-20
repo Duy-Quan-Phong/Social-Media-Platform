@@ -4,8 +4,10 @@ import com.codegym.socialmedia.component.NotificationMapper;
 import com.codegym.socialmedia.dto.NotificationDTO;
 import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.NotificationRepository;
+import com.codegym.socialmedia.service.user.EmailService;
 import com.codegym.socialmedia.service.user.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -28,6 +31,9 @@ public class NotificationService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public Notification notify(
@@ -44,9 +50,20 @@ public class NotificationService {
         n.setReferenceId(refId);
         n = repo.save(n);
 
-        // Gửi notification thông thường
+        // Push WebSocket notification
         String userKey = n.getReceiver().getUsername();
         messaging.convertAndSendToUser(userKey, "/queue/notifications", mapper.toDto(n));
+
+        // Email notification (async best-effort)
+        try {
+            var settings = n.getReceiver().getNotificationSettings();
+            if (settings != null && settings.isEmailNotifications()) {
+                String senderName = n.getSender().getFirstName() + " " + n.getSender().getLastName();
+                emailService.sendNotificationEmail(n.getReceiver().getEmail(), senderName, type.name());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send notification email", e);
+        }
 
         // Nếu là mention trong chat, gửi thêm message để auto-open chat
         if (type == Notification.NotificationType.MENTION_COMMENT &&

@@ -10,4 +10,6 @@ import lombok.NoArgsConstructor;
 public class RejectPayload {
     private Long conversationId;
     private Long rejecterId;
+    private Long callMessageId;
+    private Integer duration; // seconds, 0 if call was never answered
 }

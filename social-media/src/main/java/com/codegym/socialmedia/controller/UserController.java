@@ -32,11 +32,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Controller
 @RequestMapping("/") //duong dẫn gốc (home)
 public class UserController {
@@ -89,7 +92,7 @@ public class UserController {
                                        RedirectAttributes redirectAttributes) {
         if (!newPassword.equals(confirmPassword)){
             redirectAttributes.addFlashAttribute("error","mật khẩu mới và xác nhận mật khẩu không giống.");
-            return "redirect:/reset-password?token" + token;
+            return "redirect:/reset-password?token=" + token;
 
         }
 
@@ -184,6 +187,20 @@ public class UserController {
         return "profile/view";
     }
 
+    // =============== AVAILABILITY CHECK API ===============
+
+    @GetMapping("/api/check/username")
+    @ResponseBody
+    public ResponseEntity<Map<String, Boolean>> checkUsername(@RequestParam String value) {
+        return ResponseEntity.ok(Map.of("available", !userService.existsByUsername(value)));
+    }
+
+    @GetMapping("/api/check/email")
+    @ResponseBody
+    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String value) {
+        return ResponseEntity.ok(Map.of("available", !userService.existsByEmail(value)));
+    }
+
     // =============== AUTH / NAV ===============
 
     @GetMapping("/")
@@ -242,7 +259,7 @@ public class UserController {
             redirectAttributes.addFlashAttribute("username", registrationDto.getUsername());
             return "redirect:/login";
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Registration failed", e);
             model.addAttribute("error", "Có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại.");
             model.addAttribute("user", registrationDto);
             model.addAttribute("isAdmin", false);
@@ -387,6 +404,17 @@ public class UserController {
         User currentUser = userService.getCurrentUser();
         List<UserSearchDto> results = friendshipService.searchFriends(keyword, currentUser.getId());
         return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/hashtag/{tag}")
+    public String hashtagPage(@PathVariable String tag, org.springframework.ui.Model model) {
+        User currentUser = userService.getCurrentUser();
+        org.springframework.data.domain.Page<com.codegym.socialmedia.dto.post.PostDisplayDto> posts =
+                postService.getPostsByHashtag(tag, currentUser,
+                        org.springframework.data.domain.PageRequest.of(0, 10));
+        model.addAttribute("tag", tag);
+        model.addAttribute("posts", posts);
+        return "hashtag/browse";
     }
 
 }

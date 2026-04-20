@@ -9,6 +9,11 @@
   <!-- Font Awesome 6.4.0 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
+  <!-- HTML escape utility — must load before any innerHTML with user data -->
+  <script th:src="@{/js/sanitize.js}"></script>
+  <!-- CSRF fetch interceptor — must load before any fetch() calls -->
+  <script th:src="@{/js/csrf.js}"></script>
+
   <!-- jQuery 3.6.0 (chọn một phiên bản duy nhất) -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"
           integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="

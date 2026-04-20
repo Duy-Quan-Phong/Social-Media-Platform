@@ -23,7 +23,9 @@ public class UserRegistrationDto {
     private String username;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, max = 32, message = "Mật khẩu phải có từ 6-32 ký tự")
+    @Size(min = 8, max = 64, message = "Mật khẩu phải có từ 8-64 ký tự")
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[0-9]).{8,}$",
+             message = "Mật khẩu phải có ít nhất 1 chữ hoa và 1 chữ số")
     private String password;
 
     @NotBlank(message = "Xác nhận mật khẩu không được để trống")

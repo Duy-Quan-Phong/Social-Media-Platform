@@ -1,7 +1,6 @@
 package com.codegym.socialmedia.controller;
 
-import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.service.block.BlockService;
+import com.codegym.socialmedia.service.user.BlockService;
 import com.codegym.socialmedia.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,35 +14,29 @@ public class BlockController {
 
     @Autowired
     private BlockService blockService;
-
     @Autowired
     private UserService userService;
 
     @PostMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> blockUser(@PathVariable Long userId) {
-        User me = userService.getCurrentUser();
-        if (me == null) return ResponseEntity.status(401).body(Map.of("success", false));
-        User target = userService.getUserById(userId);
-        if (target == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Người dùng không tồn tại"));
-        blockService.blockUser(me, target);
-        return ResponseEntity.ok(Map.of("success", true, "blocked", true, "message", "Đã chặn người dùng"));
+    public ResponseEntity<Map<String, Object>> block(@PathVariable Long userId) {
+        boolean ok = blockService.block(userId);
+        return ResponseEntity.ok(Map.of("success", ok,
+                "message", ok ? "Đã chặn người dùng" : "Không thể chặn"));
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<Map<String, Object>> unblockUser(@PathVariable Long userId) {
-        User me = userService.getCurrentUser();
-        if (me == null) return ResponseEntity.status(401).body(Map.of("success", false));
-        User target = userService.getUserById(userId);
-        if (target == null) return ResponseEntity.badRequest().body(Map.of("success", false));
-        blockService.unblockUser(me, target);
-        return ResponseEntity.ok(Map.of("success", true, "blocked", false, "message", "Đã bỏ chặn người dùng"));
+    public ResponseEntity<Map<String, Object>> unblock(@PathVariable Long userId) {
+        boolean ok = blockService.unblock(userId);
+        return ResponseEntity.ok(Map.of("success", ok,
+                "message", ok ? "Đã bỏ chặn" : "Không thể bỏ chặn"));
     }
 
     @GetMapping("/status/{userId}")
-    public ResponseEntity<Map<String, Object>> getBlockStatus(@PathVariable Long userId) {
-        User me = userService.getCurrentUser();
-        if (me == null) return ResponseEntity.status(401).body(Map.of("success", false));
-        boolean blocked = blockService.isBlocked(me.getId(), userId);
-        return ResponseEntity.ok(Map.of("success", true, "blocked", blocked));
+    public ResponseEntity<Map<String, Boolean>> status(@PathVariable Long userId) {
+        Long currentId = userService.getCurrentUser().getId();
+        return ResponseEntity.ok(Map.of(
+                "blockedByMe", blockService.isBlocked(currentId, userId),
+                "blockedByThem", blockService.isBlocked(userId, currentId)
+        ));
     }
 }

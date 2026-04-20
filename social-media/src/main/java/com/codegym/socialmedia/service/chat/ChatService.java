@@ -26,4 +26,17 @@ public interface ChatService {
     void markAsRead(Long conversationId, Long userId);
     List<UserSearchDto> searchUsers(String keyword, Long currentUserId);
     List<ConversationDto> getGroupsForUser(Long userId);
+
+    // Message recall
+    MessageDto recallMessage(Long messageId, Long senderId);
+
+    // Group management
+    ConversationDto renameGroup(Long conversationId, Long userId, String newName);
+    void removeParticipant(Long conversationId, Long adminId, Long memberId);
+    void leaveGroup(Long conversationId, Long userId);
+    ConversationDto addParticipantsToGroup(Long conversationId, Long adminId, List<Long> userIds);
+
+    // Call tracking
+    Long createCallMessage(Long conversationId, Long callerId);
+    void finalizeCallMessage(Long messageId, String status, int duration);
 }

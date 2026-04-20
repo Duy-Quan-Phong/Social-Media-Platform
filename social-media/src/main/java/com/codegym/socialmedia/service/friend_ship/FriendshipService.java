@@ -30,5 +30,5 @@ public interface FriendshipService {
 
     List<Friendship> findAllFriendshipsOfUser(Long userId);
     List<UserSearchDto> searchFriends(String keyword, Long currentUserId);
-
+    Page<FriendDto> getFriendSuggestions(Long currentUserId, int page, int size);
 }

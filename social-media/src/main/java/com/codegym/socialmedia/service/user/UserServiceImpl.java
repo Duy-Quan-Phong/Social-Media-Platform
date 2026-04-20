@@ -9,7 +9,9 @@ import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.account.UserPrivacySettings;
 import com.codegym.socialmedia.repository.*;
 import jakarta.validation.constraints.Email;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,6 +21,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +34,7 @@ import java.util.List;
 
 import static com.codegym.socialmedia.service.user.CustomOAuth2UserService.fromUrl;
 
+@Slf4j
 @Service
 @Transactional
 public class UserServiceImpl implements UserService {
@@ -133,16 +138,19 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Cacheable(value = "users", key = "'id:' + #id")
     public User getUserById(Long id) {
         return iUserRepository.findById(id).orElse(null);
     }
 
     @Override
+    @Cacheable(value = "users", key = "'username:' + #username")
     public User getUserByUsername(String username) {
         return iUserRepository.findByUsername(username);
     }
 
     @Override
+    @CacheEvict(value = "users", allEntries = true)
     public User save(User newUser) {
         User existingUser = getUserByUsername(newUser.getUsername());
         if (existingUser == null) {
@@ -161,6 +169,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "users", allEntries = true)
     public User save(User user, MultipartFile image) {
         if (image != null && !image.isEmpty()) {
             user.setProfilePicture(cloudinaryService.upload(image));
@@ -210,7 +219,7 @@ public class UserServiceImpl implements UserService {
                 MultipartFile avatarFile = fromUrl(avatar, "avatar.jpg");
                 avatar = cloudinaryService.upload(avatarFile);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("OAuth2 avatar upload failed", e);
             }
 
             user.setProfilePicture(avatar);
