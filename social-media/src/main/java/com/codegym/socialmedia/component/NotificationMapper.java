@@ -18,7 +18,8 @@ public class NotificationMapper {
                 formattedDate,
                 n.getReferenceId(),
                 n.getReferenceType().name(),
-                new NotificationDTO.SenderDTO(s.getId(), s.getUsername(), s.getProfilePicture())
+                new NotificationDTO.SenderDTO(s.getId(), s.getUsername(), s.getProfilePicture()),
+                n.isRead()
         );
     }
 }

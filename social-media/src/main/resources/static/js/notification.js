@@ -24,11 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const dropdownToggle = document.getElementById(DROPDOWN_TOGGLE_ID);
     if (dropdownToggle) {
-        // Load initial notifications when dropdown shown (lazy load)
         dropdownToggle.addEventListener('show.bs.dropdown', async () => {
             if (!loadedOnce) {
                 await loadInitialNotifications();
                 loadedOnce = true;
+            }
+            // Auto mark all as read when user opens the dropdown
+            if (unreadCount > 0) {
+                markAllRead();
             }
         });
     }
@@ -123,7 +126,8 @@ function buildNotificationText(n) {
 
 function buildNotificationElement(n) {
     const a = document.createElement('a');
-    a.className = 'dropdown-item d-flex align-items-center';
+    const unread = !n.isRead;
+    a.className = 'dropdown-item d-flex align-items-center' + (unread ? ' notification-unread' : '');
     a.setAttribute('href', buildLink(n));
     if (n.id) a.dataset.id = String(n.id);
     const avatarUrl = n.sender?.avatarUrl || '/images/default-avatar.png';
@@ -131,9 +135,10 @@ function buildNotificationElement(n) {
     a.innerHTML = `
     <img src="${escapeHtml(avatarUrl)}" class="rounded-circle me-2" width="40" height="40" onerror="this.src='/images/default-avatar.png'">
     <div class="flex-grow-1">
-        <div class="small text-dark">${escapeHtml(buildNotificationText(n))}</div>
-        <div class="text-muted small">${formatTimeAgo(n.createdAt)}</div>
+        <div class="small ${unread ? 'fw-semibold text-dark' : 'text-dark'}">${escapeHtml(buildNotificationText(n))}</div>
+        <div class="${unread ? 'text-primary' : 'text-muted'} small">${formatTimeAgo(n.createdAt)}</div>
     </div>
+    ${unread ? '<span class="ms-2 bg-primary rounded-circle" style="width:8px;height:8px;min-width:8px;display:inline-block"></span>' : ''}
     `;
 
     const li = document.createElement('li');
