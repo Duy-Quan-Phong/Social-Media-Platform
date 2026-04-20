@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -37,7 +38,7 @@ public class CommentController {
     private FriendshipService friendshipService;
 
     @PostMapping("/add")
-    public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
+    public DisplayCommentDTO addComment(@Valid @RequestBody CommentRequest req) {
         PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
 
         DisplayCommentDTO newComment = DisplayCommentDTO.mapToDTO(saved, userService.getCurrentUser(),friendshipService);
@@ -55,7 +56,7 @@ public class CommentController {
     }
 
     @PutMapping("/{id}")
-    public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
+    public DisplayCommentDTO editComment(@Valid @RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent(),req.getMentionedUserIds());
         return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
@@ -111,7 +112,7 @@ public class CommentController {
     @PostMapping("/{commentId}/reply")
     public ResponseEntity<?> replyToComment(
             @PathVariable Long commentId,
-            @RequestBody CommentRequest req) {
+            @Valid @RequestBody CommentRequest req) {
         String content = req.getContent();
         User currentUser = userService.getCurrentUser();
 

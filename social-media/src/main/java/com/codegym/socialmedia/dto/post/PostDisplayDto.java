@@ -1,6 +1,7 @@
 // PostDisplayDto.java
 package com.codegym.socialmedia.dto.post;
 
+import com.codegym.socialmedia.dto.PollDto;
 import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -10,6 +11,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -36,9 +40,26 @@ public class PostDisplayDto {
     private int likesCount;
     private int commentsCount;
     private boolean isLikedByCurrentUser;
-    private boolean canEdit; // User có thể edit post này không
-    private boolean canDelete; // User có thể delete post này không
-    private boolean canComment; // User có thể comment post này không
+    private boolean isSavedByCurrentUser;
+    private boolean canEdit;
+    private boolean canDelete;
+    private boolean canComment;
+
+    // Reactions
+    private Map<String, Integer> reactionCounts;
+    private String currentUserReaction;
+
+    // Hashtags
+    private Set<String> hashtags;
+
+    // Shared post info (null if original post)
+    private Long sharedFromId;
+    private String sharedFromUsername;
+    private String sharedFromContent;
+    private List<String> sharedFromImageUrls;
+
+    // Poll (null if no poll)
+    private PollDto poll;
 
     public PostDisplayDto(Post post, boolean isLikedByCurrentUser, boolean canEdit, boolean canDelete) {
         this.id = post.getId();
@@ -57,6 +78,20 @@ public class PostDisplayDto {
         this.isLikedByCurrentUser = isLikedByCurrentUser;
         this.canEdit = canEdit;
         this.canDelete = canDelete;
+
+        if (post.getHashtags() != null) {
+            this.hashtags = post.getHashtags().stream()
+                    .map(h -> h.getName())
+                    .collect(Collectors.toSet());
+        }
+
+        if (post.getSharedFrom() != null) {
+            Post src = post.getSharedFrom();
+            this.sharedFromId = src.getId();
+            this.sharedFromUsername = src.getUser().getUsername();
+            this.sharedFromContent = src.getContent();
+            this.sharedFromImageUrls = parseImageUrls(src.getImageUrls());
+        }
     }
 
     private List<String> parseImageUrls(String imageUrlsJson) {

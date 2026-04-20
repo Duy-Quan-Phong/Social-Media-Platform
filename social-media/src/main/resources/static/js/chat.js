@@ -16,6 +16,7 @@ class ChatManager {
         this.conversationCache = new Map();
         this.pendingFiles = {};
         this.subscriptions = new Map(); // Track subscriptions per conversation
+        this.typingTimers = new Map();
         this.currentPages = new Map();
         this.hasMore = new Map();
         this.isLoadingHistory = new Map();
@@ -264,7 +265,27 @@ class ChatManager {
             const messageData = JSON.parse(message.body);
             this.handleIncomingMessage(messageData);
         });
-        this.subscriptions.set(conversationId, sub); // Store the subscription
+        this.subscriptions.set(conversationId, sub);
+
+        const typingSub = stompClient.subscribe(`/topic/conversation/${conversationId}/typing`, (msg) => {
+            const data = JSON.parse(msg.body);
+            if (String(data.userId) !== String(getCurrentUserId())) {
+                if (data.isTyping) {
+                    this.showTypingIndicator(conversationId, data.senderName);
+                } else {
+                    this.hideTypingIndicator(conversationId);
+                }
+            }
+        });
+        this.subscriptions.set(conversationId + '_typing', typingSub);
+
+        const readSub = stompClient.subscribe(`/topic/conversation/${conversationId}/read`, (msg) => {
+            const data = JSON.parse(msg.body);
+            if (String(data.userId) !== String(getCurrentUserId())) {
+                this.updateReadReceipts(conversationId, data.lastReadMessageId);
+            }
+        });
+        this.subscriptions.set(conversationId + '_read', readSub);
     }
 
     async findOrCreateConversation(targetUserId) {
@@ -294,26 +315,40 @@ class ChatManager {
     <div class="chat-user">
       <img class="chat-avatar ${type === 'group' ? 'group' : ''}" src="${avatar || (type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="${name}">
       <div class="meta">
-        <div class="name">${name || ''}</div>
+        <div class="name">${escapeHtml(name) || ''}</div>
         <div class="sub" id="chat-status-${chatId}">${type === 'group' ? 'Nhóm' : 'Đang kiểm tra...'}</div>
       </div>
     </div>
-    <div class="chat-ctl"> 
+    <div class="chat-ctl">
+      <button class="chat-btn" title="Tìm kiếm tin nhắn" onclick="chatManager.toggleChatSearch('${chatId}')"><i class="fa-solid fa-magnifying-glass"></i></button>
       <button class="chat-btn" title="Thu nhỏ" onclick="chatManager.minimizeChat('${chatId}')"><i class="fa-solid fa-minus"></i></button>
       <button class="chat-btn" title="Đóng" onclick="chatManager.closeChat('${chatId}')"><i class="fa-solid fa-xmark"></i></button>
       ${type === 'group'
-            ? `<button class="chat-btn" title="Đổi ảnh nhóm" onclick="chatManager.changeGroupAvatar('${chatId}')"><i class="fa-solid fa-image"></i></button>`
-            : ``}
+            ? `<button class="chat-btn" title="Cài đặt nhóm" onclick="chatManager.openGroupSettings('${chatId}')"><i class="fa-solid fa-gear"></i></button>
+               <button class="chat-btn" title="Đổi ảnh nhóm" onclick="chatManager.changeGroupAvatar('${chatId}')"><i class="fa-solid fa-image"></i></button>`
+            : `<button class="chat-btn" title="Chặn người dùng" onclick="chatManager.blockChatUser('${chatId}')"><i class="fa-solid fa-ban"></i></button>`}
       <button class="chat-btn" title="Video call"  onclick="chatManager.toggleVideo('${chatId}')"><i class="fa-solid fa-video"></i></button>
      </div>
   </div>
+  <div class="chat-search-bar" id="chat-search-${chatId}" style="display:none;padding:4px 8px;border-bottom:1px solid #e4e6ea">
+    <input type="text" class="form-control form-control-sm"
+           placeholder="Tìm trong cuộc trò chuyện..."
+           oninput="chatManager.searchMessages('${chatId}', this.value)">
+  </div>
+  <div id="group-settings-${chatId}" style="display:none;border-bottom:1px solid #e4e6ea;padding:10px;background:#f7f8fa;max-height:280px;overflow-y:auto">
+    <!-- populated by openGroupSettings() -->
+  </div>
   <div class="chat-messages" id="messages-${chatId}">
+  </div>
+  <div class="typing-indicator" id="typing-${chatId}" style="display:none">
+    <span class="typing-name"></span>
+    <span class="typing-dots"><span></span><span></span><span></span></span>
   </div>
   <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
   <div class="chat-input">
     <div class="input-wrap">
       <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn... ${type === 'group' ? '(Dùng @ để tag)' : ''}"
-        data-chat-type="${type}"
+        data-chat-type="${type}" maxlength="2000"
         oninput="chatManager.handleInput(event, '${chatId}')"
         onkeydown="chatManager.handleKeyDown(event, '${chatId}')"
         onkeypress="chatManager.handleKeyPress(event,'${chatId}')"></textarea>
@@ -410,6 +445,15 @@ class ChatManager {
         if (sub) {
             sub.unsubscribe();
             this.subscriptions.delete(id);
+        }
+        const typingSub = this.subscriptions.get(id + '_typing');
+        if (typingSub) {
+            typingSub.unsubscribe();
+            this.subscriptions.delete(id + '_typing');
+        }
+        if (this.typingTimers.has(id)) {
+            clearTimeout(this.typingTimers.get(id));
+            this.typingTimers.delete(id);
         }
 
         this.updateBubblesCompact();
@@ -558,20 +602,32 @@ class ChatManager {
     createMessageRow(message, type, sender = null) {
         const row = document.createElement('div');
         row.className = `message ${type}`;
+        row.dataset.messageId = message.id;
         const el = this.renderMessage(message);
+        const readTick = type === 'sent' && !message.recalled
+            ? `<span class="read-tick" title="${message.readByOther ? 'Đã xem' : 'Đã gửi'}">${message.readByOther ? '✓✓' : '✓'}</span>`
+            : '';
 
         if (type === 'received' && sender) {
             row.innerHTML = `
-        <img class="message-avatar" src="${sender.avatar || '/images/default-avatar.jpg'}" alt="${sender.name}">
-        <div class="message-content" >
-            <div class="message-sender">${sender.name}</div>
-            ${el}
+        <img class="message-avatar" src="${escapeHtml(sender.avatar || '/images/default-avatar.jpg')}" alt="${escapeHtml(sender.name)}">
+        <div class="message-content">
+            <div class="message-sender">${escapeHtml(sender.name)}</div>
+            ${el}${readTick}
         </div>`;
         } else {
             row.innerHTML = `
         <div class="message-content">
-            ${el}
+            ${el}${readTick}
         </div>`;
+        }
+
+        // Right-click context menu on own messages (not recalled)
+        if (type === 'sent' && !message.recalled) {
+            row.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showMessageContextMenu(e, message.id);
+            });
         }
 
         return row;
@@ -587,9 +643,27 @@ class ChatManager {
     }
 
     renderMessage(message) {
+        // Recalled message
+        if (message.recalled || message.type === 'RECALLED') {
+            return `<div class="message-text recalled" style="color:#999;font-style:italic">🚫 Tin nhắn đã bị thu hồi</div>`;
+        }
+
         let html = '';
 
-        // Render attachments (multiple supported)
+        // CALL type
+        if (message.type === 'CALL') {
+            const status = message.callStatus;
+            const dur = message.callDuration;
+            const durStr = dur && dur > 0
+                ? ` · ${Math.floor(dur/60).toString().padStart(2,'0')}:${(dur%60).toString().padStart(2,'0')}`
+                : '';
+            const icon = status === 'MISSED' ? '📵' : '📞';
+            const label = status === 'MISSED' ? 'Cuộc gọi nhỡ' : status === 'COMPLETED' ? `Cuộc gọi video${durStr}` : 'Đang gọi...';
+            html = `<div class="message-call" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f0f2f5;border-radius:8px">${icon} <span>${label}</span></div>`;
+            return html;
+        }
+
+        // Render attachments
         (message.attachments || []).forEach(att => {
             switch (att.type) {
                 case "IMAGE":
@@ -601,36 +675,70 @@ class ChatManager {
                 case "AUDIO":
                     html += `<audio controls src="${att.attachmentUrl}" class="message-audio"></audio>`;
                     break;
-                case "FILE":
+                case "FILE": {
                     const ext = att.attachmentUrl.split('.').pop().toLowerCase();
-                    html += `
-                    <div class="message-file">
+                    html += `<div class="message-file">
                           <a href="${att.attachmentUrl}" download="${att.fileName}" class="file-link">
                             <div class="file-icon ${ext}"></div>
                             <div class="file-info">
                               <div class="file-name">${att.fileName}</div>
                               <div class="file-size">${att.fileSize}</div>
                             </div>
-                          </a>
-                        </div>
-                                `;
+                          </a></div>`;
                     break;
+                }
                 default:
                     html += `<div class="message-unknown">[Unsupported attachment]</div>`;
             }
         });
 
-        // If CALL type without attachments/content
-        if (message.type === "CALL" && !html) {
-            html = `<div class="message-call"> Cuộc gọi: ${message.content || 'Không xác định'}</div>`;
-        }
-
-        // Render content if present (TEXT or CALL description)
         if (message.content) {
-            html += `<div class="message-text">${ChatManager.processMentions(message.content)}</div>`;
+            html += `<div class="message-text">${escapeHtml(message.content)}</div>`;
         }
 
         return html || `<div class="message-unknown">[Empty message]</div>`;
+    }
+
+    toggleChatSearch(chatId) {
+        const bar = document.getElementById(`chat-search-${chatId}`);
+        if (!bar) return;
+        const isVisible = bar.style.display !== 'none';
+        bar.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            bar.querySelector('input')?.focus();
+        } else {
+            // Clear highlights when closing
+            this.searchMessages(chatId, '');
+            bar.querySelector('input').value = '';
+        }
+    }
+
+    searchMessages(chatId, query) {
+        const box = document.getElementById(`messages-${chatId}`);
+        if (!box) return;
+        const rows = box.querySelectorAll('.message-text');
+        const q = (query || '').trim().toLowerCase();
+
+        rows.forEach(el => {
+            const wrapper = el.closest('.message');
+            if (!wrapper) return;
+            if (!q) {
+                wrapper.style.display = '';
+                el.innerHTML = el.textContent; // clear highlights
+                return;
+            }
+            const text = el.textContent || '';
+            if (text.toLowerCase().includes(q)) {
+                wrapper.style.display = '';
+                const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                el.innerHTML = escapeHtml(text).replace(
+                    new RegExp(`(${escaped})`, 'gi'),
+                    '<mark style="background:#fff176;padding:0">$1</mark>'
+                );
+            } else {
+                wrapper.style.display = 'none';
+            }
+        });
     }
 
     toggleVideo(conversation_id) {
@@ -789,6 +897,7 @@ class ChatManager {
     handleInput(evt, convId) {
         const ta = evt.target;
         this.autoResize(ta);
+        this.sendTypingStatus(convId, ta.value.length > 0);
         if ((ta.dataset.chatType || 'private') !== 'group') return;
 
         const val = ta.value;
@@ -1005,6 +1114,166 @@ class ChatManager {
         return String(text || '').replace(/@(\w+)/g, (_, u) => `<span class="mention-tag">@${u}</span>`);
     }
 
+    // ── Message context menu & recall ────────────────────────────────────────
+
+    showMessageContextMenu(event, messageId) {
+        document.getElementById('msg-ctx-menu')?.remove();
+        const menu = document.createElement('div');
+        menu.id = 'msg-ctx-menu';
+        menu.style.cssText = `position:fixed;top:${event.clientY}px;left:${event.clientX}px;background:#fff;border:1px solid #e4e6eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:15000;min-width:140px`;
+        menu.innerHTML = `<div style="padding:8px 14px;cursor:pointer;font-size:.9rem;color:#d32f2f" id="recall-btn-${messageId}">🚫 Thu hồi tin nhắn</div>`;
+        document.body.appendChild(menu);
+        document.getElementById(`recall-btn-${messageId}`)?.addEventListener('click', () => {
+            menu.remove();
+            this.recallMessage(messageId);
+        });
+        const close = () => { menu.remove(); document.removeEventListener('click', close); };
+        setTimeout(() => document.addEventListener('click', close), 0);
+    }
+
+    async recallMessage(messageId) {
+        try {
+            const res = await fetch(`/api/chat/message/${messageId}/recall`, { method: 'PATCH' });
+            const data = await res.json();
+            if (!data.success) this.toast(data.error || 'Không thể thu hồi', 'error');
+        } catch (e) {
+            this.toast('Lỗi thu hồi tin nhắn', 'error');
+        }
+    }
+
+    // ── Read receipts ────────────────────────────────────────────────────────
+
+    updateReadReceipts(conversationId, lastReadMessageId) {
+        const box = document.getElementById(`messages-${conversationId}`);
+        if (!box) return;
+        box.querySelectorAll('.message.sent .read-tick').forEach(tick => {
+            const row = tick.closest('[data-message-id]');
+            if (!row) return;
+            const msgId = Number(row.dataset.messageId);
+            if (msgId <= lastReadMessageId) {
+                tick.textContent = '✓✓';
+                tick.title = 'Đã xem';
+                tick.style.color = '#1877f2';
+            }
+        });
+    }
+
+    // ── Group settings panel ─────────────────────────────────────────────────
+
+    async openGroupSettings(conversationId) {
+        const panel = document.getElementById(`group-settings-${conversationId}`);
+        if (!panel) return;
+        if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+
+        const meId = Number(getCurrentUserId());
+        const participants = await fetch(`/api/chat/conversation/${conversationId}/participants`).then(r => r.json());
+        const me = participants.find(p => p.id == meId);
+        const isAdmin = me?.role === 'ADMIN';
+        const conv = document.querySelector(`#chat-${conversationId} .name`)?.textContent || '';
+
+        panel.innerHTML = `
+          <div style="font-size:.85rem;font-weight:600;margin-bottom:8px">⚙️ Cài đặt nhóm</div>
+          ${isAdmin ? `<div style="display:flex;gap:6px;margin-bottom:10px">
+            <input id="grp-name-${conversationId}" value="${this.escape(conv)}" style="flex:1;border:1px solid #e4e6eb;border-radius:6px;padding:4px 8px;font-size:.85rem">
+            <button onclick="chatManager.renameGroup('${conversationId}')" style="background:#1877f2;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.8rem;cursor:pointer">Lưu</button>
+          </div>` : `<div style="font-size:.85rem;color:#65676b;margin-bottom:8px">Tên nhóm: <strong>${this.escape(conv)}</strong></div>`}
+          <div style="font-size:.82rem;color:#65676b;margin-bottom:4px">Thành viên (${participants.length})</div>
+          <div style="max-height:160px;overflow-y:auto">
+            ${participants.map(p => `
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                <img src="${p.avatar || '/images/default-avatar.jpg'}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">
+                <span style="flex:1;font-size:.85rem">${this.escape(p.fullName)} ${p.role === 'ADMIN' ? '<span style="color:#1877f2;font-size:.75rem">[Admin]</span>' : ''}</span>
+                ${isAdmin && p.id != meId ? `<button onclick="chatManager.removeMember('${conversationId}',${p.id})" style="background:none;border:1px solid #dc3545;color:#dc3545;border-radius:4px;padding:2px 6px;font-size:.75rem;cursor:pointer">Xóa</button>` : ''}
+              </div>`).join('')}
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            ${isAdmin ? `<button onclick="chatManager.promptAddMember('${conversationId}')" style="background:#28a745;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.8rem;cursor:pointer">+ Thêm thành viên</button>` : ''}
+            <button onclick="chatManager.leaveGroup('${conversationId}')" style="background:#dc3545;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.8rem;cursor:pointer">Rời nhóm</button>
+          </div>`;
+        panel.style.display = 'block';
+    }
+
+    async renameGroup(conversationId) {
+        const input = document.getElementById(`grp-name-${conversationId}`);
+        const newName = input?.value?.trim();
+        if (!newName) return this.toast('Tên nhóm không được để trống', 'error');
+        try {
+            const res = await fetch(`/api/chat/group/${conversationId}/rename`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: newName})
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.querySelector(`#chat-${conversationId} .name`).textContent = newName;
+                this.toast('Đã đổi tên nhóm', 'success');
+            } else this.toast(data.error || 'Lỗi', 'error');
+        } catch { this.toast('Lỗi đổi tên nhóm', 'error'); }
+    }
+
+    async removeMember(conversationId, memberId) {
+        if (!confirm('Xóa thành viên này?')) return;
+        try {
+            const res = await fetch(`/api/chat/group/${conversationId}/members/${memberId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                this.toast('Đã xóa thành viên', 'success');
+                this.openGroupSettings(conversationId); // refresh panel
+            } else this.toast(data.error || 'Lỗi', 'error');
+        } catch { this.toast('Lỗi xóa thành viên', 'error'); }
+    }
+
+    async leaveGroup(conversationId) {
+        if (!confirm('Bạn có muốn rời nhóm này?')) return;
+        try {
+            const res = await fetch(`/api/chat/group/${conversationId}/leave`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                this.closeChat(conversationId);
+                this.toast('Đã rời nhóm', 'success');
+            } else this.toast(data.error || 'Lỗi', 'error');
+        } catch { this.toast('Lỗi rời nhóm', 'error'); }
+    }
+
+    async promptAddMember(conversationId) {
+        const query = prompt('Nhập tên hoặc username để tìm kiếm:');
+        if (!query) return;
+        try {
+            const users = await fetch(`/api/chat/search-users?query=${encodeURIComponent(query)}`).then(r => r.json());
+            if (!users.length) return this.toast('Không tìm thấy người dùng', 'info');
+            const list = users.map(u => `${u.fullName} (@${u.username})`).join('\n');
+            const idx = prompt(`Chọn số (1-${users.length}):\n${users.map((u,i) => `${i+1}. ${u.fullName}`).join('\n')}`);
+            const picked = users[parseInt(idx) - 1];
+            if (!picked) return;
+            const res = await fetch(`/api/chat/group/${conversationId}/members`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({userIds: [picked.id]})
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.toast('Đã thêm thành viên', 'success');
+                this.openGroupSettings(conversationId);
+            } else this.toast(data.error || 'Lỗi', 'error');
+        } catch { this.toast('Lỗi thêm thành viên', 'error'); }
+    }
+
+    // ── Block user in private chat ────────────────────────────────────────────
+
+    async blockChatUser(conversationId) {
+        if (!confirm('Bạn có muốn chặn người dùng này không?')) return;
+        try {
+            const parts = await fetch(`/api/chat/conversation/${conversationId}/participants`).then(r => r.json());
+            const meId = Number(getCurrentUserId());
+            const other = parts.find(p => p.id != meId);
+            if (!other) return;
+            const res = await fetch(`/api/block/${other.id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                this.closeChat(conversationId);
+                this.toast('Đã chặn người dùng', 'success');
+            } else this.toast(data.error || 'Lỗi', 'error');
+        } catch { this.toast('Lỗi chặn người dùng', 'error'); }
+    }
+
     changeGroupAvatar(conversationId) {
         const input = document.createElement('input');
         input.type = 'file';
@@ -1030,6 +1299,40 @@ class ChatManager {
             }
         };
         input.click();
+    }
+
+    sendTypingStatus(conversationId, isTyping) {
+        if (!stompClient || !stompClient.connected) return;
+        const id = String(conversationId);
+        if (isTyping) {
+            if (this.typingTimers.has(id)) clearTimeout(this.typingTimers.get(id));
+            stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: true }));
+            const timer = setTimeout(() => {
+                if (stompClient && stompClient.connected) {
+                    stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: false }));
+                }
+                this.typingTimers.delete(id);
+            }, 3000);
+            this.typingTimers.set(id, timer);
+        } else {
+            if (this.typingTimers.has(id)) {
+                clearTimeout(this.typingTimers.get(id));
+                this.typingTimers.delete(id);
+            }
+            stompClient.send('/app/chat/typing', {}, JSON.stringify({ conversationId: id, isTyping: false }));
+        }
+    }
+
+    showTypingIndicator(conversationId, name) {
+        const el = document.getElementById(`typing-${conversationId}`);
+        if (!el) return;
+        el.querySelector('.typing-name').textContent = name;
+        el.style.display = 'flex';
+    }
+
+    hideTypingIndicator(conversationId) {
+        const el = document.getElementById(`typing-${conversationId}`);
+        if (el) el.style.display = 'none';
     }
 
     autoResize(ta) {
@@ -1059,6 +1362,19 @@ class ChatManager {
         const id = String(payload.conversationId);
         const me = String(getCurrentUserId());
         const mine = String(payload.senderId) === me;
+
+        // Handle recall event: update existing message in DOM
+        if (payload.type === 'RECALLED' || payload.recalled) {
+            const msgEl = document.querySelector(`[data-message-id="${payload.id}"]`);
+            if (msgEl) {
+                const content = msgEl.querySelector('.message-content');
+                if (content) {
+                    content.innerHTML = `<div class="message-text recalled" style="color:#999;font-style:italic">🚫 Tin nhắn đã bị thu hồi</div>`;
+                }
+            }
+            return;
+        }
+
         if (ChatManager.openChats.has(id)) {
             if (mine) {
                 this.addMessageToUI(id, payload, 'sent');

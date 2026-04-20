@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MessageRepository extends JpaRepository<Message, Integer> {
+public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Query("""
         SELECT m FROM Message m
@@ -39,4 +39,7 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
             "JOIN ConversationParticipant cp ON cp.conversation.id = m.conversation.id " +
             "WHERE cp.user.id = :userId AND m.messageId > COALESCE(cp.lastReadMessageId, 0)")
     Long countTotalUnread(@Param("userId") Long userId);
+
+    @Query("SELECT m FROM Message m WHERE m.conversation.id = :conversationId AND m.messageType = 'CALL' ORDER BY m.sentAt DESC")
+    List<Message> findLatestCallMessages(@Param("conversationId") Long conversationId, Pageable pageable);
 }

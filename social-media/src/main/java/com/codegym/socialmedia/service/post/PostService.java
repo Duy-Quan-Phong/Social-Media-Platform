@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface PostService {
 
@@ -23,14 +24,29 @@ public interface PostService {
     Page<PostDisplayDto> getPostsForNewsFeed(User currentUser, Pageable pageable);
     Page<PostDisplayDto> getPostsByUser(User targetUser, User currentUser, Pageable pageable);
     Page<PostDisplayDto> getPublicPostsByUser(User targetUser, User currentUser ,Pageable pageable);
-    Page<PostDisplayDto> searchUserPosts(User user,User currentUser, String keyword, Pageable pageable);
+    Page<PostDisplayDto> searchUserPosts(User user, User currentUser, String keyword, Pageable pageable);
+    Page<PostDisplayDto> searchPublicPosts(String keyword, User currentUser, Pageable pageable);
+
+    // Save/Bookmark functionality
+    boolean toggleSavePost(Long postId, User user);
+    Page<PostDisplayDto> getSavedPosts(User user, Pageable pageable);
 
     // Like functionality
     boolean toggleLike(Long postId, User user);
+
+    // Reaction functionality
+    String toggleReaction(Long postId, User user, String reactionType);
     List<User> getUsersWhoLiked(Long postId);
     int getLikeCount(Post id);
     int countCommentsByPost(Post post);
     List<String> getPhotosForProfile (User profileOwner, User viewer);
     // Utility
     long countUserPosts(User user);
+
+    // Hashtags
+    Page<PostDisplayDto> getPostsByHashtag(String tag, User currentUser, Pageable pageable);
+    List<Map<String, Object>> getTrendingHashtags(int limit);
+
+    // Share
+    Post sharePost(Long originalPostId, User user, String comment);
 }

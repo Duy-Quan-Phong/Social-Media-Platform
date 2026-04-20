@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="user-id" th:content="${currentUser.id}">
+    <title>Bài viết đã lưu - Facebook</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/news-feed.css}">
+    <link rel="stylesheet" th:href="@{/css/post.css}">
+    <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="main-container">
+    <!-- Left Sidebar -->
+    <div class="nav-sidebar">
+        <div class="user-profile">
+            <div class="avatar">
+                <img th:if="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                     th:src="${#authentication.principal.avatarUrl}" alt="Avatar"
+                     class="rounded-circle" style="width: 36px; height: 36px; object-fit: cover;">
+                <span th:unless="${#authentication.principal.avatarUrl != null and !#strings.isEmpty(#authentication.principal.avatarUrl)}"
+                      th:text="${#strings.substring(#authentication.name, 0, 1).toUpperCase()}">U</span>
+            </div>
+            <div>
+                <h4 th:text="${#authentication.principal.fullName}">Tên người dùng</h4>
+                <p class="user-role">Thành viên</p>
+            </div>
+        </div>
+        <h3>Danh mục</h3>
+        <a href="/news-feed" class="nav-item body-item">
+            <i class="fas fa-home"></i>
+            <span>Trang chủ</span>
+        </a>
+        <a href="/friends" class="nav-item body-item">
+            <i class="fas fa-user-friends"></i>
+            <span>Bạn bè</span>
+        </a>
+        <a href="/posts/saved" class="nav-item body-item active">
+            <i class="fas fa-bookmark"></i>
+            <span>Đã lưu</span>
+        </a>
+    </div>
+
+    <!-- Main Feed -->
+    <div class="feed">
+        <div class="post-item" style="padding: 16px 20px; margin-bottom: 12px;">
+            <h4 style="margin:0; display:flex; align-items:center; gap:10px;">
+                <i class="fas fa-bookmark" style="color:#1877f2;"></i> Bài viết đã lưu
+            </h4>
+            <p style="margin:6px 0 0; color:#65676b; font-size:14px;">Chỉ bạn mới thấy những gì đã lưu</p>
+        </div>
+
+        <div id="posts-container" data-saved="true">
+            <!-- Posts will be loaded here dynamically -->
+        </div>
+        <div id="loading-indicator" class="text-center py-3" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+        <div id="no-more-posts" class="text-center py-3 text-muted" style="display: none;">
+            <i class="fas fa-check-circle"></i> Bạn đã xem hết tất cả bài viết đã lưu
+        </div>
+        <div id="profile-no-posts" class="text-center py-5 text-muted" style="display: none;">
+            <i class="fas fa-bookmark fa-3x mb-3" style="color:#ccc;"></i>
+            <p>Bạn chưa lưu bài viết nào</p>
+            <a href="/news-feed" class="btn btn-primary btn-sm">Khám phá bài viết</a>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="sidebar">
+        <h5><i class="fas fa-users"></i> Người liên hệ</h5>
+        <div id="onlineFriendsList">
+            <div class="text-center p-3">
+                <i class="fas fa-spinner fa-spin"></i> Đang tải...
+            </div>
+        </div>
+        <hr class="divider">
+        <h5><i class="fas fa-comments"></i> Nhóm chat</h5>
+        <div id="groupChatsList">
+            <div class="text-center p-3">
+                <i class="fas fa-spinner fa-spin"></i> Đang tải...
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/chat-fragment :: chatContainers"></div>
+<div th:replace="fragments/post/post-form :: edit-post-form"></div>
+
+<script type="module" th:src="@{/js/post.js}"></script>
+<script th:src="@{/js/activity-tracker.js}"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const currentUser = /*[[${#authentication.principal.username}]]*/ 'defaultUser';
+    if (document.querySelector('meta[name="user-id"]')) {
+        document.querySelector('meta[name="user-id"]').content = /*[[${currentUser.id}]]*/ '0';
+    }
+    /*]]>*/
+</script>
+<script th:src="@{/js/news-feed.js}"></script>
+</body>
+</html>

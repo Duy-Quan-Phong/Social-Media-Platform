@@ -12,6 +12,7 @@ import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.notification.NotificationService;
 import com.codegym.socialmedia.service.notification.PostMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ import java.util.*;
 
 import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -76,7 +78,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             return savedComment;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Comment operation failed", e);
             return null;
         }
     }
@@ -115,7 +117,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             return DisplayCommentDTO.mapToDTO(savedReply, currentUser, friendshipService);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Comment operation failed", e);
             return null;
         }
     }
@@ -210,7 +212,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             postMessage.notifyCommentStatusChanged(post.getId(), postCommentRepository.countByPost(post));
             return comment;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Comment operation failed", e);
             return null;
         }
     }

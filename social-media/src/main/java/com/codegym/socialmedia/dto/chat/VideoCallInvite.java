@@ -11,5 +11,6 @@ public class VideoCallInvite {
     private Long callerId;
     private Long conversationId;
     private String callerName;
-    private String callerAvatarUrl; // có thể null nếu chưa có avatar
+    private String callerAvatarUrl;
+    private Long callMessageId;
 }

@@ -17,9 +17,13 @@
                 <a class="navbar-brand me-2 logo" th:href="@{/news-feed}">
                     <img th:src="@{/images/2023_Facebook_icon.svg.webp}" alt="Facebook" height="42">
                 </a>
-                <form class="d-none d-md-block" role="search">
-                    <input class="form-control form-control-sm" type="search" placeholder="Tìm kiếm..."
-                           aria-label="Search">
+                <form class="d-none d-md-block" role="search" action="/search" method="get"
+                      onsubmit="if(!this.q.value.trim()){return false;}">
+                    <input class="form-control form-control-sm" type="search" name="q"
+                           placeholder="Tìm kiếm..." aria-label="Tìm kiếm người dùng và bài viết"
+                           id="globalSearchInput"
+                           autocomplete="off"
+                           onkeydown="if(event.key==='Enter'&&this.value.trim())this.form.submit()">
                 </form>
             </div>
 
@@ -61,7 +65,7 @@
                         <li><a href="/friends" class="nav-item body-item"><i class="fas fa-user-friends"></i> <span>Bạn bè</span></a></li>
                         <li><a href="#" class="nav-item body-item developing"><i class="fas fa-users"></i> <span>Nhóm</span></a></li>
                         <li><a href="#" class="nav-item body-item developing"><i class="fas fa-history"></i> <span>Kỷ niệm</span></a></li>
-                        <li><a href="#" class="nav-item body-item developing"><i class="fas fa-bookmark"></i> <span>Đã lưu</span></a></li>
+                        <li><a href="/posts/saved" class="nav-item body-item"><i class="fas fa-bookmark"></i> <span>Đã lưu</span></a></li>
                         <li><a href="#" class="nav-item body-item developing"><i class="fas fa-video"></i> <span>Video</span></a></li>
                         <li><a href="#" class="nav-item body-item developing"><i class="fas fa-store"></i> <span>Marketplace</span></a></li>
                     </ul>
@@ -87,6 +91,7 @@
                     <a id="notificationDropdown"
                        class="nav-icon-wrapper position-relative dropdown-toggle no-caret"
                        href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                       aria-label="Thông báo"
                        data-bs-placement="bottom" title="Thông báo"
                        style="text-decoration: none; color: white">
                         <div class="d-flex align-items-center">

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm - Facebook</title>
+    <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/news-feed.css}">
+    <link rel="stylesheet" th:href="@{/css/post.css}">
+    <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .search-results { max-width: 680px; margin: 0 auto; padding: 16px; }
+        .search-section-title { font-weight: 700; font-size: 18px; margin: 16px 0 8px; }
+        .user-card { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; }
+        .user-card:hover { background: #f0f2f5; }
+        .user-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+        .user-card-info .name { font-weight: 600; }
+        .user-card-info .username { font-size: 13px; color: #65676b; }
+        .search-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .search-tab { padding: 8px 18px; border-radius: 20px; border: none; background: #e4e6eb; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .search-tab.active { background: #1877f2; color: white; }
+        #no-results { text-align: center; padding: 40px; color: #65676b; display: none; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/common/header :: header}"></div>
+
+<div class="search-results">
+    <h4 id="search-heading">
+        Kết quả tìm kiếm: "<span id="query-display" th:text="${q}"></span>"
+    </h4>
+
+    <div class="search-tabs">
+        <button class="search-tab active" onclick="switchTab('all')" id="tab-all">Tất cả</button>
+        <button class="search-tab" onclick="switchTab('users')" id="tab-users">Mọi người</button>
+        <button class="search-tab" onclick="switchTab('posts')" id="tab-posts">Bài viết</button>
+    </div>
+
+    <!-- Users section -->
+    <div id="users-section">
+        <div class="search-section-title"><i class="fas fa-users me-2"></i>Mọi người</div>
+        <div id="users-list"></div>
+    </div>
+
+    <!-- Posts section -->
+    <div id="posts-section">
+        <div class="search-section-title"><i class="fas fa-newspaper me-2"></i>Bài viết</div>
+        <div id="posts-container"></div>
+        <div id="loading-indicator" class="text-center py-3" style="display:none">
+            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+        </div>
+        <div id="no-more-posts" class="text-center py-3 text-muted" style="display:none">
+            <i class="fas fa-check-circle"></i> Đã hiển thị tất cả bài viết
+        </div>
+    </div>
+
+    <div id="no-results">
+        <i class="fas fa-search fa-3x mb-3" style="color:#ccc;"></i>
+        <p>Không tìm thấy kết quả cho "<span id="no-results-query"></span>"</p>
+    </div>
+</div>
+
+<div th:replace="fragments/chat-fragment :: chatContainers"></div>
+<div th:replace="fragments/post/post-form :: edit-post-form"></div>
+
+<script type="module" th:src="@{/js/post.js}"></script>
+<script th:src="@{/js/activity-tracker.js}"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+const currentUser = /*[[${#authentication.principal.username}]]*/ 'defaultUser';
+const INITIAL_Q = /*[[${q}]]*/ '';
+/*]]>*/
+</script>
+<script th:src="@{/js/news-feed.js}"></script>
+<script>
+let currentTab = 'all';
+let postsPage = 0;
+let postsLoading = false;
+let postsNoMore = false;
+const q = INITIAL_Q;
+
+async function loadUsers() {
+    if (!q) return;
+    const res = await fetch(`/api/search/users?q=${encodeURIComponent(q)}&size=20`);
+    if (!res.ok) return;
+    const users = await res.json();
+    const list = document.getElementById('users-list');
+    list.innerHTML = '';
+    users.forEach(u => {
+        const avatar = u.avatarUrl || '/images/default-avatar.jpg';
+        list.innerHTML += `
+        <a href="/profile/${u.username}" class="user-card">
+            <img src="${avatar}" alt="${u.fullName}" onerror="this.src='/images/default-avatar.jpg'">
+            <div class="user-card-info">
+                <div class="name">${u.fullName}</div>
+                <div class="username">@${u.username}</div>
+            </div>
+        </a>`;
+    });
+    if (users.length === 0) document.getElementById('users-section').style.display = 'none';
+}
+
+async function loadMorePosts() {
+    if (!q || postsLoading || postsNoMore) return;
+    postsLoading = true;
+    document.getElementById('loading-indicator').style.display = 'block';
+    const res = await fetch(`/api/search/posts?q=${encodeURIComponent(q)}&page=${postsPage}&size=10`);
+    document.getElementById('loading-indicator').style.display = 'none';
+    postsLoading = false;
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.content && data.content.length > 0) {
+        data.content.forEach(post => {
+            const el = document.getElementById('posts-container');
+            if (window.postManager) el.insertAdjacentHTML('beforeend', postManager.createPostHTML(post));
+        });
+        postsPage++;
+        postsNoMore = data.last;
+        if (postsNoMore) document.getElementById('no-more-posts').style.display = 'block';
+    } else if (postsPage === 0) {
+        document.getElementById('posts-section').style.display = 'none';
+    }
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.search-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    const usersSection = document.getElementById('users-section');
+    const postsSection = document.getElementById('posts-section');
+    if (tab === 'all') { usersSection.style.display = ''; postsSection.style.display = ''; }
+    else if (tab === 'users') { usersSection.style.display = ''; postsSection.style.display = 'none'; }
+    else { usersSection.style.display = 'none'; postsSection.style.display = ''; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (q) { loadUsers(); loadMorePosts(); }
+    window.addEventListener('scroll', () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) loadMorePosts();
+    });
+});
+</script>
+</body>
+</html>

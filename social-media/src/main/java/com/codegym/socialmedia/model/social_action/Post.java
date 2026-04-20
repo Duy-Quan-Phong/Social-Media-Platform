@@ -8,7 +8,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "posts")
@@ -25,11 +27,11 @@ public class Post {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 5000) // Đủ cho nội dung bài viết
+    @Column(length = 5000)
     private String content;
 
     @Column(columnDefinition = "JSON")
-    private String imageUrls; // Lưu mảng URL ảnh dưới dạng JSON
+    private String imageUrls;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -42,6 +44,21 @@ public class Post {
     @Column(nullable = false)
     private boolean isDeleted = false;
 
+    // Shared from another post (null = original)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_from_id")
+    @ToString.Exclude
+    private Post sharedFrom;
+
+    @ManyToMany
+    @JoinTable(
+        name = "post_hashtags",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "hashtag_id")
+    )
+    @ToString.Exclude
+    private Set<Hashtag> hashtags = new HashSet<>();
+
     @Column(name = "created_at", columnDefinition = "DATETIME")
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -52,9 +69,11 @@ public class Post {
 
     // Relationships
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<LikePost> likes;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<PostComment> comments;
 
     @Override

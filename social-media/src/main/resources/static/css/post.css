@@ -1,4 +1,21 @@
 /* Posts CSS */
+
+/* Hashtag links */
+.hashtag-link {
+    color: #1877f2;
+    text-decoration: none;
+    font-weight: 500;
+}
+.hashtag-link:hover { text-decoration: underline; }
+
+/* Shared post preview */
+.shared-post-preview {
+    border: 1px solid #e4e6eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    background: #f7f8fa;
+}
 .post-creator {
     background: white;
     border-radius: 8px;
@@ -386,7 +403,72 @@
     color: #ff0007;
 }
 
+.post-action.save-btn.saved,
+.post-action.save-btn.saved i {
+    color: #1877f2;
+}
 
+/* Reaction button wrapper */
+.reaction-btn-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+}
+
+.reaction-btn-wrapper .reaction-main-btn {
+    flex: 1;
+}
+
+/* Reaction picker popup */
+.reaction-picker {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.85);
+    background: #fff;
+    border-radius: 40px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    display: flex;
+    gap: 2px;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    white-space: nowrap;
+}
+
+.reaction-btn-wrapper:hover .reaction-picker,
+.reaction-picker.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) scale(1);
+}
+
+.reaction-option {
+    background: none;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    padding: 4px 5px;
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reaction-option:hover {
+    transform: scale(1.35) translateY(-5px);
+}
+
+/* Reaction summary in stats bar */
+.reaction-summary {
+    font-size: 16px;
+    margin-right: 2px;
+    vertical-align: middle;
+}
 
 /* Comments Section */
 .post-comments {

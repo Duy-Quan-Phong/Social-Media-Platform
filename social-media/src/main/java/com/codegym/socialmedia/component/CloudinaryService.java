@@ -14,15 +14,29 @@ public class CloudinaryService {
     @Autowired
     private Cloudinary cloudinary;
 
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    private static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of(
+            "image/jpeg", "image/png", "image/gif", "image/webp",
+            "video/mp4", "video/webm", "video/ogg"
+    );
+
     public String upload(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File không được để trống");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("File quá lớn, tối đa 10MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Chỉ hỗ trợ ảnh (JPEG/PNG/GIF/WEBP) và video (MP4/WEBM/OGG)");
+        }
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap("resource_type", "auto"));
-            // Lấy đường dẫn an toàn (https)
             return (String) uploadResult.get("secure_url");
         } catch (IOException ex) {
-            System.out.println("Upload lỗi: " + ex.getMessage());
-            return null; // hoặc throw exception tùy cách xử lý của bạn
+            throw new RuntimeException("Upload thất bại: " + ex.getMessage(), ex);
         }
     }
 

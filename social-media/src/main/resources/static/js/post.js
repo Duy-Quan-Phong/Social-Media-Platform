@@ -1,5 +1,19 @@
 import {formatTimeAgo} from './timeUtils.js';
 
+// Auto-link #hashtags in already-escaped HTML text
+function linkHashtags(escapedHtml) {
+    return escapedHtml.replace(/#([\w\u00C0-\u024F]+)/g,
+        (match, tag) => `<a href="/hashtag/${tag.toLowerCase()}" class="hashtag-link">#${tag}</a>`);
+}
+
+const REACTIONS = {
+    LIKE: { emoji: '👍', label: 'Thích',     color: '#1877f2' },
+    LOVE: { emoji: '❤️', label: 'Yêu thích', color: '#f33e58' },
+    HAHA: { emoji: '😂', label: 'Haha',       color: '#f7b928' },
+    WOW:  { emoji: '😮', label: 'Wow',        color: '#f7b928' },
+    SAD:  { emoji: '😢', label: 'Buồn',       color: '#f7b928' },
+};
+
 // Posts JavaScript
 class PostManager {
     constructor() {
@@ -13,8 +27,11 @@ class PostManager {
         this.submitBtn = document.getElementById("post-submit-btn");
         const container = document.getElementById('posts-container');
         this.username = container.getAttribute('data-username');
+        this.isSavedPage = container.getAttribute('data-saved') === 'true';
         this.init();
     }
+
+    static DRAFT_KEY = 'post_draft';
 
     init() {
         if (this.form != null && this.form != undefined) {
@@ -23,11 +40,36 @@ class PostManager {
             });
         }
         this.setupEventListeners();
+        this.restoreDraft();
         this.loadInitialPosts();
         this.setupInfiniteScroll();
     }
 
+    restoreDraft() {
+        const draft = localStorage.getItem(PostManager.DRAFT_KEY);
+        if (!draft) return;
+        const input = document.querySelector('.post-content-input');
+        if (input && !input.value) {
+            input.value = draft;
+            this.validatePostForm();
+            this.showNotification('Đã khôi phục bản nháp.', 'info');
+        }
+    }
+
+    saveDraft(value) {
+        if (value && value.trim()) {
+            localStorage.setItem(PostManager.DRAFT_KEY, value);
+        } else {
+            localStorage.removeItem(PostManager.DRAFT_KEY);
+        }
+    }
+
+    clearDraft() {
+        localStorage.removeItem(PostManager.DRAFT_KEY);
+    }
+
     handleSubmit() {
+        this.clearDraft();
         // Disable nút
         this.submitBtn.disabled = true;
         this.submitBtn.innerText = "Đang đăng...";
@@ -44,10 +86,13 @@ class PostManager {
 
     setupEventListeners() {
 
-        // Content input validation
+        // Content input validation + draft save
         const contentInput = document.querySelector('.post-content-input');
         if (contentInput) {
-            contentInput.addEventListener('input', () => this.validatePostForm());
+            contentInput.addEventListener('input', () => {
+                this.validatePostForm();
+                this.saveDraft(contentInput.value);
+            });
         }
 
         // Image input
@@ -188,6 +233,9 @@ class PostManager {
         if (this.username != null && this.username != undefined && this.username.trim() != '') {
             controllerURL = `/posts/api/user/${this.username}?page=${this.currentPage}&size=10`;
         }
+        if (this.isSavedPage) {
+            controllerURL = `/posts/api/saved?page=${this.currentPage}&size=10`;
+        }
 
         try {
             const data = await $.ajax({
@@ -248,11 +296,29 @@ class PostManager {
     }
 
     setupInfiniteScroll() {
-        window.addEventListener('scroll', () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
-                this.loadPosts();
-            }
-        });
+        // Use IntersectionObserver for efficient infinite scroll
+        const sentinel = document.createElement('div');
+        sentinel.id = 'post-scroll-sentinel';
+        sentinel.style.height = '10px';
+        const container = document.getElementById('posts-container');
+        if (container) container.insertAdjacentElement('afterend', sentinel);
+
+        const observer = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) this.loadPosts();
+        }, { threshold: 0.1 });
+        observer.observe(sentinel);
+    }
+
+    // Expose a method to render a post element (used by hashtag page, search page, etc.)
+    renderPost(post) {
+        const div = document.createElement('div');
+        div.innerHTML = this.createPostElement(post);
+        const el = div.firstElementChild;
+        if (el) {
+            this.subscribeToPostLikes(post.id);
+            this.subscribeToPostComments(post.id);
+        }
+        return el;
     }
 
     appendPost(post) {
@@ -278,13 +344,13 @@ class PostManager {
         const timeAgo = formatTimeAgo(post.createdAt);
 
         return `
-            <div class="post-item" data-post-id="${post.id}">
+            <div class="post-item" data-post-id="${post.id}" data-user-id="${post.userId}">
                 <div class="post-header">
-                    <img src="${post.userAvatarUrl || '/images/default-avatar.jpg'}" 
-                         alt="Avatar" class="post-avatar">
+                    <img src="${escapeHtml(post.userAvatarUrl || '/images/default-avatar.jpg')}"
+                         alt="Avatar" class="post-avatar" loading="lazy">
                     <div class="post-user-info">
-                        <a href="/profile/${post.username}" class="post-username">
-                            ${post.userFullName}
+                        <a href="/profile/${escapeHtml(post.username)}" class="post-username">
+                            ${escapeHtml(post.userFullName)}
                         </a>
                         <div class="post-meta">
                             <span class="post-time">${timeAgo}</span>
@@ -297,11 +363,12 @@ class PostManager {
                     </div>
                     ${post.canEdit || post.canDelete ? `
                        <!-- Dropdown -->
-                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton" 
+                       <div class="dropdown">
+                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton-${post.id}"
                                   data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-ellipsis-h"></i>
                           </button>
-                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-${post.id}">
                             <li>
                              ${post.canEdit ? `<button class="dropdown-item" onclick="postManager.editPost(${post.id})">
                                     <i class="fas fa-edit"></i> Chỉnh sửa
@@ -313,50 +380,81 @@ class PostManager {
                                 </button >` : ''}
                             </li>
                           </ul>
+                       </div>
                     ` : ''}
                 </div>
                 
-                <div class="post-content">${post.content}</div>
-                
+                <div class="post-content">${linkHashtags(escapeHtml(post.content))}</div>
+
+                ${post.sharedFromId ? `
+                <div class="shared-post-preview" style="border:1px solid #e4e6eb;border-radius:8px;padding:12px;margin:8px 0;background:#f7f8fa">
+                    <a href="/profile/${escapeHtml(post.sharedFromUsername || '')}" style="font-weight:600;color:#050505;font-size:.9rem">
+                        @${escapeHtml(post.sharedFromUsername || '')}
+                    </a>
+                    <p style="margin:4px 0;color:#050505;font-size:.9rem">${linkHashtags(escapeHtml(post.sharedFromContent || ''))}</p>
+                    ${post.sharedFromImageUrls && post.sharedFromImageUrls.length > 0
+                        ? `<img src="${escapeHtml(post.sharedFromImageUrls[0])}" style="max-width:100%;border-radius:6px;margin-top:6px" loading="lazy">`
+                        : ''}
+                </div>` : ''}
+
                 ${imagesHtml}
                 
                     <div class="post-stats">
                         <div class="post-likes">
-                                <div class="post-likes-icon">
-                                    <i class="fas fa-heart"></i>
-                                </div>
-                                <span>${post.likesCount} lượt thích</span>
-                           
+                            ${this.buildReactionStatsHtml(post)}
                         </div>
                         <div>
-                                <span class="post-comments-count"
-                                 style="cursor:pointer;" 
-      onclick="postManager.toggleComments(${post.id}, true)">${post.commentsCount} bình luận</span>
+                            <span class="post-comments-count"
+                                  style="cursor:pointer;"
+                                  onclick="postManager.toggleComments(${post.id}, true)">${post.commentsCount} bình luận</span>
                         </div>
                     </div>
               
                 
                 <div class="post-actions">
-                    <button class="post-action ${post.likedByCurrentUser ? 'liked' : ''}" 
-                            onclick="postManager.toggleLike(${post.id},'post')">
-                        <i class="fas fa-heart"></i>
-                        <span>Thích</span>
-                    </button>
+                    ${this.buildReactionButtonHtml(post)}
                     ${post.canComment ? `   <button class="post-action" onclick="postManager.toggleComments(${post.id})">
                         <i class="fas fa-comment"></i>
                         <span>Bình luận</span>
                     </button>` : ''}
                  
                     
-                    <button class="post-action">
+                    <button class="post-action save-btn ${post.savedByCurrentUser ? 'saved' : ''}"
+                            onclick="postManager.toggleSave(${post.id})">
+                        <i class="${post.savedByCurrentUser ? 'fas' : 'far'} fa-bookmark"></i>
+                        <span>${post.savedByCurrentUser ? 'Đã lưu' : 'Lưu'}</span>
+                    </button>
+
+                    ${post.privacyLevel === 'PUBLIC' ? `
+                    <button class="post-action" onclick="postManager.sharePost(${post.id})">
                         <i class="fas fa-share"></i>
                         <span>Chia sẻ</span>
+                    </button>` : ''}
+
+                    <button class="post-action" onclick="postManager.blockUser(${post.userId}, ${post.id})">
+                        <i class="fas fa-ban"></i>
                     </button>
                 </div>
+
+                ${post.poll ? `
+                <div class="post-poll" id="poll-${post.poll.id}" style="padding:12px;border-top:1px solid #e4e6eb">
+                    <p style="font-weight:600;margin:0 0 8px">${escapeHtml(post.poll.question)}</p>
+                    ${post.poll.options.map(o => `
+                    <div onclick="postManager.votePoll(${post.poll.id}, ${o.id})" style="cursor:pointer;margin-bottom:6px">
+                        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:2px">
+                            <span>${escapeHtml(o.text)}</span>
+                            <span>${o.voteCount} phiếu (${o.percentage}%)</span>
+                        </div>
+                        <div style="height:8px;background:#e4e6eb;border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:${o.percentage}%;background:${o.votedByMe ? '#1877f2' : '#65676b'};transition:width .4s"></div>
+                        </div>
+                    </div>`).join('')}
+                    <p style="font-size:.75rem;color:#65676b;margin-top:4px">${post.poll.totalVotes} phiếu bầu${post.poll.endsAt ? ' · Kết thúc ' + post.poll.endsAt : ''}</p>
+                </div>` : ''}
                 
                 <div class="post-comments" id="comments-${post.id}" style="display: none;">
                  ${post.canComment ? `<div class="comment-form">
-                        <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar">
+                        <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar" loading="lazy">
                         <div class="comment-input-container" style="position: relative">
                             <textarea class="comment-input" placeholder="Viết bình luận..." 
                                      onkeypress="postManager.handleCommentKeyPress(event, ${post.id})"
@@ -435,6 +533,93 @@ class PostManager {
         return html;
     }
 
+    buildReactionStatsHtml(post) {
+        const counts = post.reactionCounts || {};
+        const total = post.likesCount || 0;
+        if (total === 0) return '';
+        const topEmojis = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([type]) => REACTIONS[type]?.emoji || '👍')
+            .join('');
+        return `<span class="reaction-summary">${topEmojis || '👍'}</span><span>${total} lượt thích</span>`;
+    }
+
+    buildReactionButtonHtml(post) {
+        const reaction = post.currentUserReaction;
+        const r = reaction ? REACTIONS[reaction] : null;
+        const icon = r ? `<span>${r.emoji}</span>` : '<i class="fas fa-thumbs-up"></i>';
+        const label = r ? r.label : 'Thích';
+        const color = r ? `style="color:${r.color}"` : '';
+        const pickerButtons = Object.entries(REACTIONS).map(([type, info]) =>
+            `<button class="reaction-option" title="${info.label}"
+                     onclick="event.stopPropagation();postManager.pickReaction(${post.id},'${type}')">${info.emoji}</button>`
+        ).join('');
+        return `
+            <div class="reaction-btn-wrapper">
+                <button class="post-action reaction-main-btn ${reaction ? 'reacted' : ''}"
+                        data-post-id="${post.id}"
+                        data-reaction="${reaction || ''}"
+                        ${color}
+                        onclick="postManager.toggleReactionDefault(${post.id})">
+                    ${icon}<span>${label}</span>
+                </button>
+                <div class="reaction-picker" id="reaction-picker-${post.id}">
+                    ${pickerButtons}
+                </div>
+            </div>`;
+    }
+
+    async toggleReactionDefault(postId) {
+        const btn = document.querySelector(`.post-item[data-post-id="${postId}"] .reaction-main-btn`);
+        const current = btn?.dataset.reaction || '';
+        await this.pickReaction(postId, current || 'LIKE');
+    }
+
+    async pickReaction(postId, reactionType) {
+        try {
+            const res = await fetch(`/posts/api/react/${postId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({reactionType})
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.updateReactionUI(postId, data.newReaction);
+            } else {
+                this.showNotification(data.message || 'Có lỗi xảy ra', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            this.showNotification('Có lỗi xảy ra', 'error');
+        }
+    }
+
+    updateReactionUI(postId, newReaction) {
+        const wrapper = document.querySelector(`.post-item[data-post-id="${postId}"] .reaction-btn-wrapper`);
+        if (!wrapper) return;
+        const btn = wrapper.querySelector('.reaction-main-btn');
+        if (!btn) return;
+        const icon = btn.firstElementChild;
+        const label = btn.querySelector('span:last-child');
+
+        if (newReaction && REACTIONS[newReaction]) {
+            const r = REACTIONS[newReaction];
+            btn.classList.add('reacted');
+            btn.dataset.reaction = newReaction;
+            btn.style.color = r.color;
+            if (icon) { icon.className = ''; icon.textContent = r.emoji; }
+            if (label) label.textContent = r.label;
+        } else {
+            btn.classList.remove('reacted');
+            btn.dataset.reaction = '';
+            btn.style.color = '';
+            if (icon) { icon.textContent = ''; icon.innerHTML = '<i class="fas fa-thumbs-up"></i>'; }
+            if (label) label.textContent = 'Thích';
+        }
+        wrapper.querySelector('.reaction-picker')?.classList.remove('visible');
+    }
+
     async toggleLike(targetId, type = 'post') {
         let url = "";
         if (type === 'post') url = `/posts/api/like/${targetId}`;
@@ -464,6 +649,111 @@ class PostManager {
         } catch (err) {
             console.error(err);
             alert(err.message || "Có lỗi xảy ra khi like/unlike");
+        }
+    }
+
+    async toggleSave(postId) {
+        try {
+            const res = await fetch(`/posts/api/save/${postId}`, {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.updateSaveUI(postId, data.saved);
+                this.showNotification(data.message, 'success');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ── Share post ─────────────────────────────────────────────────────────────
+    async sharePost(postId) {
+        const comment = prompt('Thêm bình luận (tuỳ chọn):') ?? '';
+        const csrf = document.querySelector('meta[name="_csrf"]')?.content || '';
+        try {
+            const res = await fetch(`/posts/api/share/${postId}`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRF-TOKEN': csrf},
+                body: JSON.stringify({comment})
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.appendPost(data.post);
+                this.showNotification('Đã chia sẻ bài viết!', 'success');
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // ── Poll voting ────────────────────────────────────────────────────────────
+    async votePoll(pollId, optionId) {
+        const csrf = document.querySelector('meta[name="_csrf"]')?.content || '';
+        try {
+            const res = await fetch(`/api/polls/${pollId}/vote/${optionId}`, {
+                method: 'POST',
+                headers: {'X-CSRF-TOKEN': csrf}
+            });
+            const poll = await res.json();
+            this.updatePollUI(poll);
+        } catch(e) { console.error(e); }
+    }
+
+    updatePollUI(poll) {
+        const container = document.getElementById(`poll-${poll.id}`);
+        if (!container) return;
+        const optionsHtml = poll.options.map(o => `
+            <div onclick="postManager.votePoll(${poll.id}, ${o.id})" style="cursor:pointer;margin-bottom:6px">
+                <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:2px">
+                    <span>${escapeHtml(o.text)}</span><span>${o.voteCount} phiếu (${o.percentage}%)</span>
+                </div>
+                <div style="height:8px;background:#e4e6eb;border-radius:4px;overflow:hidden">
+                    <div style="height:100%;width:${o.percentage}%;background:${o.votedByMe ? '#1877f2' : '#65676b'};transition:width .4s"></div>
+                </div>
+            </div>`).join('');
+        container.innerHTML = `<p style="font-weight:600;margin:0 0 8px">${escapeHtml(poll.question)}</p>${optionsHtml}
+            <p style="font-size:.75rem;color:#65676b;margin-top:4px">${poll.totalVotes} phiếu bầu</p>`;
+    }
+
+    // ── Block user ────────────────────────────────────────────────────────────
+    async blockUser(userId, postId) {
+        if (!confirm('Bạn có muốn chặn người dùng này không?')) return;
+        const csrf = document.querySelector('meta[name="_csrf"]')?.content || '';
+        try {
+            const res = await fetch(`/api/block/${userId}`, {
+                method: 'POST',
+                headers: {'X-CSRF-TOKEN': csrf}
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Hide all posts from this user
+                document.querySelectorAll(`.post-item`).forEach(el => {
+                    const pid = el.dataset.postId;
+                    if (el.querySelector(`[data-user-id="${userId}"]`)) el.remove();
+                });
+                const postEl = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+                if (postEl) postEl.remove();
+                this.showNotification('Đã chặn người dùng', 'success');
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    updateSaveUI(postId, saved) {
+        const postEl = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+        if (!postEl) return;
+        const btn = postEl.querySelector('.save-btn');
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        const label = btn.querySelector('span');
+        if (saved) {
+            btn.classList.add('saved');
+            if (icon) icon.className = 'fas fa-bookmark';
+            if (label) label.textContent = 'Đã lưu';
+        } else {
+            btn.classList.remove('saved');
+            if (icon) icon.className = 'far fa-bookmark';
+            if (label) label.textContent = 'Lưu';
+            if (this.isSavedPage) postEl.remove();
         }
     }
 
@@ -942,11 +1232,12 @@ class PostManager {
     }
 
     static processMentions(text, mentionUsers = []) {
-        let processed = text;
+        let processed = escapeHtml(text);
         mentionUsers.forEach(user => {
-            const escapedFullName = user.fullName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`@${escapedFullName}(?![\\w])`, 'g'); // Stop if next is word char
-            processed = processed.replace(regex, `<a href="/profile/${user.username}" class="mention-tag">@${user.fullName}</a>`);
+            const escapedFullName = escapeHtml(user.fullName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`@${escapedFullName}(?![\\w])`, 'g');
+            processed = processed.replace(regex,
+                `<a href="/profile/${escapeHtml(user.username)}" class="mention-tag">@${escapeHtml(user.fullName)}</a>`);
         });
         return processed;
     }
@@ -980,9 +1271,9 @@ class PostManager {
     ${parentId ? `<div class="line-reply"></div>` : ''}  <!-- horizontal connector -->
     <div style="position: relative; max-width: 100%; overflow: hidden;" class="comment-card d-flex ${parentId ? 'reply' : ''}" id="comment-${c.commentId}" data-comment-id="${c.commentId}">
         ${actionButtons} 
-        <img src="${c.userAvatarUrl || '/images/default-avatar.jpg'}" alt="avatar" class="comment-avatar">
+        <img src="${escapeHtml(c.userAvatarUrl || '/images/default-avatar.jpg')}" alt="avatar" class="comment-avatar" loading="lazy">
         <div class="comment-body">
-            <strong>${c.userFullName || c.username}</strong>
+            <strong>${escapeHtml(c.userFullName || c.username)}</strong>
             <span class="comment-time">${timeAgo}</span>
             <p class="comment-text" >
                 ${PostManager.processMentions(c.comment, c.mentionUsers || [])}

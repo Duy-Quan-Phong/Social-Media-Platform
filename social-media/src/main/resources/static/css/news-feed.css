@@ -1,3 +1,58 @@
+/* ── Stories bar ─────────────────────────────────────────────────────── */
+.stories-bar {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    scrollbar-width: none;
+}
+.stories-bar::-webkit-scrollbar { display: none; }
+
+.story-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 72px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 10px;
+    transition: background .15s;
+}
+.story-card:hover { background: #f0f2f5; }
+.story-card span { font-size: .72rem; text-align: center; color: #050505; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.story-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #1877f2;
+}
+
+.story-add {
+    flex-direction: column;
+}
+.story-add-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #e4e6eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #1877f2;
+}
+
+/* ── Story viewer overlay ────────────────────────────────────────────── */
+.story-progress { display: flex; gap: 3px; padding: 8px 16px; }
+.story-progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,.4); border-radius: 2px; }
+.story-progress-bar.done { background: #fff; }
 
 .friend-item-enhanced {
     display: flex;

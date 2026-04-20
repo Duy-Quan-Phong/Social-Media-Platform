@@ -87,7 +87,6 @@ public class FriendController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         User currentUser = userService.getCurrentUser();
         Long currentUserId = currentUser.getId();
-        Page<FriendDto> friendDtos = friendshipService.findNonFriends(currentUserId, page, size);
         return friendshipService.findNonFriends(currentUserId, page, size);
     }
 

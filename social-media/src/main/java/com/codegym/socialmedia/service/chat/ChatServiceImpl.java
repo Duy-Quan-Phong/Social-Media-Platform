@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @Transactional
@@ -40,6 +41,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private NotificationService notificationService;
 
     @Autowired private UserActivityService userActivityService;
+    @Autowired private FriendshipService friendshipService;
     @Override
     public ConversationDto findOrCreatePrivateConversation(Long currentUserId, Long targetUserId) {
         Optional<Conversation> existing = conversationRepository
@@ -103,10 +105,8 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // Set messageType logically
-        if (request.getContent() != null && request.getContent().contains("call")) {
-            message.setMessageType(Message.MessageType.CALL);
-        } else if (message.getAttachments().isEmpty()) {
+        // Set messageType based on attachments only (never infer CALL from text content)
+        if (message.getAttachments().isEmpty()) {
             message.setMessageType(Message.MessageType.TEXT);
         } else {
             message.setMessageType(message.getAttachments().get(0).getMessageType());
@@ -298,6 +298,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public List<UserSearchDto> searchUsers(String keyword, Long currentUserId) {
         Pageable limit = PageRequest.of(0, 10);
+        User currentUser = userRepository.findById(currentUserId).orElse(null);
         return userRepository.searchUsersExcludeCurrent(keyword, currentUserId, limit)
                 .stream().map(u -> {
                     UserSearchDto dto = new UserSearchDto();
@@ -305,7 +306,10 @@ public class ChatServiceImpl implements ChatService {
                     dto.setUsername(u.getUsername());
                     dto.setFullName(safeFullName(u));
                     dto.setAvatarUrl(u.getProfilePicture());
-                    dto.setFriend(true); // TODO: có thể check thật bằng FriendshipService
+                    boolean isFriend = currentUser != null &&
+                            friendshipService.getFriendshipStatus(currentUser, u) ==
+                            com.codegym.socialmedia.model.social_action.Friendship.FriendshipStatus.ACCEPTED;
+                    dto.setFriend(isFriend);
                     return dto;
                 }).collect(Collectors.toList());
     }
@@ -410,14 +414,18 @@ public class ChatServiceImpl implements ChatService {
             return ad;
         }).collect(Collectors.toList()));
 
-        // Set primary type for DTO (for JS rendering): CALL if callStatus, else TEXT if no attachments, else first attachment type
         if (m.getCallStatus() != null) {
             dto.setType("CALL");
+            dto.setCallStatus(m.getCallStatus().name());
+            dto.setCallDuration(m.getCallDuration());
         } else if (m.getAttachments().isEmpty()) {
             dto.setType("TEXT");
         } else {
             dto.setType(m.getAttachments().get(0).getMessageType().name());
         }
+
+        dto.setRecalled(Boolean.TRUE.equals(m.getIsRecalled()));
+        dto.setDeleted(Boolean.TRUE.equals(m.getIsDeleted()));
 
         return dto;
     }
@@ -498,7 +506,125 @@ public class ChatServiceImpl implements ChatService {
         return full.isEmpty() ? Optional.ofNullable(u.getUsername()).orElse("Người dùng") : full;
     }
 
+    // ── Message recall ───────────────────────────────────────────────────────
 
+    @Override
+    public MessageDto recallMessage(Long messageId, Long senderId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+        if (!msg.getSender().getId().equals(senderId)) {
+            throw new RuntimeException("Unauthorized: can only recall own messages");
+        }
+        msg.setIsRecalled(true);
+        msg.setContent("[Tin nhắn đã bị thu hồi]");
+        messageRepository.save(msg);
+        MessageDto dto = mapToMessageDto(msg);
+        dto.setType("RECALLED");
+        return dto;
+    }
 
+    // ── Group management ─────────────────────────────────────────────────────
 
+    @Override
+    public ConversationDto renameGroup(Long conversationId, Long userId, String newName) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        if (conv.getConversationType() != Conversation.ConversationType.GROUP)
+            throw new RuntimeException("Not a group conversation");
+        ConversationParticipant cp = participantRepository.findByConversationIdAndUserId(conversationId, userId)
+                .orElseThrow(() -> new RuntimeException("Not a participant"));
+        if (cp.getRole() != ConversationParticipant.Role.ADMIN)
+            throw new RuntimeException("Only ADMIN can rename group");
+        conv.setConversationName(newName);
+        conversationRepository.save(conv);
+        return mapToConversationDto(conv, userId);
+    }
+
+    @Override
+    public void removeParticipant(Long conversationId, Long adminId, Long memberId) {
+        ConversationParticipant admin = participantRepository.findByConversationIdAndUserId(conversationId, adminId)
+                .orElseThrow(() -> new RuntimeException("Not a participant"));
+        if (admin.getRole() != ConversationParticipant.Role.ADMIN)
+            throw new RuntimeException("Only ADMIN can remove members");
+        ConversationParticipant member = participantRepository.findByConversationIdAndUserId(conversationId, memberId)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+        member.setIsActive(false);
+        participantRepository.save(member);
+    }
+
+    @Override
+    public void leaveGroup(Long conversationId, Long userId) {
+        ConversationParticipant cp = participantRepository.findByConversationIdAndUserId(conversationId, userId)
+                .orElseThrow(() -> new RuntimeException("Not a participant"));
+        cp.setIsActive(false);
+        participantRepository.save(cp);
+        // If the leaving user was admin, promote the oldest remaining member
+        if (cp.getRole() == ConversationParticipant.Role.ADMIN) {
+            participantRepository.findByConversationId(conversationId).stream()
+                    .filter(p -> !p.getUser().getId().equals(userId) && Boolean.TRUE.equals(p.getIsActive()))
+                    .min(Comparator.comparing(ConversationParticipant::getJoinedAt))
+                    .ifPresent(next -> {
+                        next.setRole(ConversationParticipant.Role.ADMIN);
+                        participantRepository.save(next);
+                    });
+        }
+    }
+
+    @Override
+    public ConversationDto addParticipantsToGroup(Long conversationId, Long adminId, List<Long> userIds) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        ConversationParticipant admin = participantRepository.findByConversationIdAndUserId(conversationId, adminId)
+                .orElseThrow(() -> new RuntimeException("Not a participant"));
+        if (admin.getRole() != ConversationParticipant.Role.ADMIN)
+            throw new RuntimeException("Only ADMIN can add members");
+        for (Long uid : userIds) {
+            if (participantRepository.findByConversationIdAndUserId(conversationId, uid).isPresent()) continue;
+            User u = userRepository.findById(uid).orElse(null);
+            if (u == null) continue;
+            ConversationParticipant p = new ConversationParticipant();
+            p.setId(new ConversationParticipantId(conversationId, uid));
+            p.setConversation(conv);
+            p.setUser(u);
+            p.setRole(ConversationParticipant.Role.MEMBER);
+            p.setJoinedAt(LocalDateTime.now());
+            p.setIsActive(true);
+            participantRepository.save(p);
+        }
+        return mapToConversationDto(conv, adminId);
+    }
+
+    // ── Call tracking ────────────────────────────────────────────────────────
+
+    @Override
+    public Long createCallMessage(Long conversationId, Long callerId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        User caller = userRepository.findById(callerId)
+                .orElseThrow(() -> new RuntimeException("Caller not found"));
+        Message msg = new Message();
+        msg.setConversation(conv);
+        msg.setSender(caller);
+        msg.setContent("📞 Cuộc gọi video");
+        msg.setMessageType(Message.MessageType.CALL);
+        msg.setCallStatus(Message.CallStatus.PENDING);
+        msg.setSentAt(LocalDateTime.now());
+        msg.setIsDeleted(false);
+        msg.setIsRecalled(false);
+        return messageRepository.save(msg).getMessageId();
+    }
+
+    @Override
+    public void finalizeCallMessage(Long messageId, String status, int duration) {
+        if (messageId == null) return;
+        messageRepository.findById(messageId).ifPresent(msg -> {
+            try {
+                msg.setCallStatus(Message.CallStatus.valueOf(status));
+            } catch (IllegalArgumentException ignored) {
+                msg.setCallStatus(Message.CallStatus.COMPLETED);
+            }
+            msg.setCallDuration(duration);
+            messageRepository.save(msg);
+        });
+    }
 }
