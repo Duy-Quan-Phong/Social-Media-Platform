@@ -122,6 +122,7 @@ public class UserController {
             Model model) {
 
         User viewedUser = userService.getUserByUsername(username);
+        if (viewedUser == null) return "error/404";
         User currentUser = userService.getCurrentUser();
 
         boolean isOwner = currentUser != null
@@ -130,18 +131,19 @@ public class UserController {
                 && currentUser.getId().equals(viewedUser.getId());
 
         // Friendship check
-        Friendship friendship = null;
+        boolean isSender = false;
+        boolean isReceiver = false;
         if (!isOwner && currentUser != null) {
-            friendship = friendshipService.findByUsers(currentUser.getId(), viewedUser.getId());
+            Friendship friendship = friendshipService.findByUsers(currentUser.getId(), viewedUser.getId());
             if (friendship != null) {
-                boolean isSender = friendship.getRequester() != null
+                isSender = friendship.getRequester() != null
                         && currentUser.getId().equals(friendship.getRequester().getId());
-                boolean isReceiver = friendship.getAddressee() != null
+                isReceiver = friendship.getAddressee() != null
                         && currentUser.getId().equals(friendship.getAddressee().getId());
-                model.addAttribute("isSender", isSender);
-                model.addAttribute("isReceiver", isReceiver);
             }
         }
+        model.addAttribute("isSender", isSender);
+        model.addAttribute("isReceiver", isReceiver);
 
         Friendship.FriendshipStatus friendshipStatus =
                 friendshipService.getFriendshipStatus(viewedUser, currentUser);
