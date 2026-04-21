@@ -406,15 +406,4 @@ public class UserController {
         return ResponseEntity.ok(results);
     }
 
-    @GetMapping("/hashtag/{tag}")
-    public String hashtagPage(@PathVariable String tag, org.springframework.ui.Model model) {
-        User currentUser = userService.getCurrentUser();
-        org.springframework.data.domain.Page<com.codegym.socialmedia.dto.post.PostDisplayDto> posts =
-                postService.getPostsByHashtag(tag, currentUser,
-                        org.springframework.data.domain.PageRequest.of(0, 10));
-        model.addAttribute("tag", tag);
-        model.addAttribute("posts", posts);
-        return "hashtag/browse";
-    }
-
 }
