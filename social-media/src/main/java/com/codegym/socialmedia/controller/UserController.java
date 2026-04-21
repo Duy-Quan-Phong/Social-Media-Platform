@@ -113,6 +113,10 @@ public class UserController {
 
     @Autowired
     private UserStatsService userStatsService;
+
+    @Autowired
+    private com.codegym.socialmedia.service.block.BlockService blockService;
+
     // =============== PROFILE ===============
 
     @GetMapping("/profile/{username}")
@@ -182,8 +186,10 @@ public class UserController {
         model.addAttribute("friendshipStatus", friendshipStatus.name());
         model.addAttribute("targetUserId", viewedUser.getId());
         model.addAttribute("filter", filter);
+        boolean isBlocked = !isOwner && currentUser != null
+                && blockService.isBlockedEither(currentUser.getId(), viewedUser.getId());
+        model.addAttribute("isBlocked", isBlocked);
 
-        // Placeholder cho posts (sau bạn bind từ PostService)
         model.addAttribute("posts", new ArrayList<>());
 
         return "profile/view";
