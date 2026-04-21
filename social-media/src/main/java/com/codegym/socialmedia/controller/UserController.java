@@ -122,7 +122,7 @@ public class UserController {
             Model model) {
 
         User viewedUser = userService.getUserByUsername(username);
-        if (viewedUser == null) return "error/404";
+        if (viewedUser == null) return "redirect:/news-feed";
         User currentUser = userService.getCurrentUser();
 
         boolean isOwner = currentUser != null
