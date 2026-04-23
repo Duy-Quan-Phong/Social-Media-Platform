@@ -387,13 +387,21 @@ class PostManager {
                 <div class="post-content">${linkHashtags(escapeHtml(post.content))}</div>
 
                 ${post.sharedFromId ? `
-                <div class="shared-post-preview" style="border:1px solid #e4e6eb;border-radius:8px;padding:12px;margin:8px 0;background:#f7f8fa">
-                    <a href="/profile/${escapeHtml(post.sharedFromUsername || '')}" style="font-weight:600;color:#050505;font-size:.9rem">
-                        @${escapeHtml(post.sharedFromUsername || '')}
-                    </a>
-                    <p style="margin:4px 0;color:#050505;font-size:.9rem">${linkHashtags(escapeHtml(post.sharedFromContent || ''))}</p>
+                <div class="shared-post-preview" style="border:1px solid #e4e6eb;border-radius:8px;overflow:hidden;margin:8px 0;background:#f7f8fa">
+                    <div style="padding:10px 12px;display:flex;align-items:center;gap:8px">
+                        <img src="${escapeHtml(post.sharedFromUserAvatarUrl || '/images/default-avatar.jpg')}"
+                             style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0"
+                             loading="lazy" onerror="this.src='/images/default-avatar.jpg'">
+                        <a href="/profile/${escapeHtml(post.sharedFromUsername || '')}"
+                           style="font-weight:600;color:#050505;font-size:.9rem;text-decoration:none">
+                            ${escapeHtml(post.sharedFromUserFullName || post.sharedFromUsername || '')}
+                        </a>
+                    </div>
+                    ${post.sharedFromContent ? `<p style="margin:0;padding:0 12px 8px;color:#050505;font-size:.9rem">${linkHashtags(escapeHtml(post.sharedFromContent))}</p>` : ''}
                     ${post.sharedFromImageUrls && post.sharedFromImageUrls.length > 0
-                        ? `<img src="${escapeHtml(post.sharedFromImageUrls[0])}" style="max-width:100%;border-radius:6px;margin-top:6px" loading="lazy">`
+                        ? post.sharedFromImageUrls.map(url =>
+                            `<img src="${escapeHtml(url)}" style="width:100%;display:block;max-height:400px;object-fit:cover" loading="lazy" onerror="this.style.display='none'">`
+                          ).join('')
                         : ''}
                 </div>` : ''}
 

@@ -55,6 +55,8 @@ public class PostDisplayDto {
     // Shared post info (null if original post)
     private Long sharedFromId;
     private String sharedFromUsername;
+    private String sharedFromUserFullName;
+    private String sharedFromUserAvatarUrl;
     private String sharedFromContent;
     private List<String> sharedFromImageUrls;
 
@@ -89,6 +91,8 @@ public class PostDisplayDto {
             Post src = post.getSharedFrom();
             this.sharedFromId = src.getId();
             this.sharedFromUsername = src.getUser().getUsername();
+            this.sharedFromUserFullName = src.getUser().getFirstName() + " " + src.getUser().getLastName();
+            this.sharedFromUserAvatarUrl = src.getUser().getProfilePicture();
             this.sharedFromContent = src.getContent();
             this.sharedFromImageUrls = parseImageUrls(src.getImageUrls());
         }

@@ -137,16 +137,19 @@ class ChatManager {
                 const activityData = await activityResponse.json();
 
                 const statusEl = document.getElementById(`chat-status-${conversationId}`);
+                const dotEl = document.getElementById(`chat-dot-${conversationId}`);
                 if (statusEl) {
-                    statusEl.textContent = activityData.lastActivity;
+                    statusEl.textContent = activityData.online ? 'Đang hoạt động' : (activityData.lastActivity || 'Ngoại tuyến');
                     statusEl.className = activityData.online ? 'sub online' : 'sub offline';
                 }
+                if (dotEl) dotEl.className = `chat-online-dot ${activityData.online ? '' : 'offline'}`;
             }
         } catch (error) {
             console.error('Error loading activity status:', error);
             const statusEl = document.getElementById(`chat-status-${conversationId}`);
             if (statusEl) {
-                statusEl.textContent = 'Không xác định';
+                statusEl.textContent = 'Ngoại tuyến';
+                statusEl.className = 'sub offline';
             }
         }
     }
@@ -154,8 +157,10 @@ class ChatManager {
     // Thêm method để update activity status realtime
     updateActivityStatus(conversationId, isOnline, lastActivity) {
         const statusEl = document.getElementById(`chat-status-${conversationId}`);
+        const dotEl = document.getElementById(`chat-dot-${conversationId}`);
+        if (dotEl) dotEl.className = `chat-online-dot ${isOnline ? '' : 'offline'}`;
         if (statusEl) {
-            statusEl.textContent = lastActivity;
+            statusEl.textContent = isOnline ? 'Đang hoạt động' : (lastActivity || 'Ngoại tuyến');
             statusEl.className = isOnline ? 'sub online' : 'sub offline';
         }
     }
@@ -310,36 +315,37 @@ class ChatManager {
         wrap.setAttribute('data-conversation-id', chatId);
         wrap.setAttribute('data-conversation-type', type);
 
+        const defaultAvatar = type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg';
         wrap.innerHTML = `
-  <div class="chat-header ${type === 'group' ? 'is-group' : ''}">
-    <div class="chat-user">
-      <img class="chat-avatar ${type === 'group' ? 'group' : ''}" src="${avatar || (type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="${name}">
+  <div class="chat-header">
+    <div class="chat-user" onclick="${type === 'group' ? `chatManager.openGroupSettings('${chatId}')` : ''}">
+      <div class="chat-avatar-wrap">
+        <img class="chat-avatar" src="${avatar || defaultAvatar}" alt="${escapeHtml(name)}"
+             onerror="this.src='${defaultAvatar}'">
+        <span class="chat-online-dot offline" id="chat-dot-${chatId}"></span>
+      </div>
       <div class="meta">
-        <div class="name">${escapeHtml(name) || ''}</div>
-        <div class="sub" id="chat-status-${chatId}">${type === 'group' ? 'Nhóm' : 'Đang kiểm tra...'}</div>
+        <div class="name">${type === 'group' ? '👥 ' : ''}${escapeHtml(name) || ''}</div>
+        <div class="sub offline" id="chat-status-${chatId}">${type === 'group' ? `${escapeHtml(name)}` : 'Đang kiểm tra...'}</div>
       </div>
     </div>
     <div class="chat-ctl">
-      <button class="chat-btn" title="Tìm kiếm tin nhắn" onclick="chatManager.toggleChatSearch('${chatId}')"><i class="fa-solid fa-magnifying-glass"></i></button>
-      <button class="chat-btn" title="Thu nhỏ" onclick="chatManager.minimizeChat('${chatId}')"><i class="fa-solid fa-minus"></i></button>
-      <button class="chat-btn" title="Đóng" onclick="chatManager.closeChat('${chatId}')"><i class="fa-solid fa-xmark"></i></button>
+      <button class="chat-btn" title="Video call" onclick="chatManager.toggleVideo('${chatId}')"><i class="fa-solid fa-video"></i></button>
+      <button class="chat-btn" title="Tìm kiếm" onclick="chatManager.toggleChatSearch('${chatId}')"><i class="fa-solid fa-magnifying-glass"></i></button>
       ${type === 'group'
-            ? `<button class="chat-btn" title="Cài đặt nhóm" onclick="chatManager.openGroupSettings('${chatId}')"><i class="fa-solid fa-gear"></i></button>
-               <button class="chat-btn" title="Đổi ảnh nhóm" onclick="chatManager.changeGroupAvatar('${chatId}')"><i class="fa-solid fa-image"></i></button>`
-            : `<button class="chat-btn" title="Chặn người dùng" onclick="chatManager.blockChatUser('${chatId}')"><i class="fa-solid fa-ban"></i></button>`}
-      <button class="chat-btn" title="Video call"  onclick="chatManager.toggleVideo('${chatId}')"><i class="fa-solid fa-video"></i></button>
-     </div>
+            ? `<button class="chat-btn" title="Cài đặt nhóm" onclick="chatManager.openGroupSettings('${chatId}')"><i class="fa-solid fa-gear"></i></button>`
+            : `<button class="chat-btn" title="Chặn" onclick="chatManager.blockChatUser('${chatId}')"><i class="fa-solid fa-ban"></i></button>`}
+      <button class="chat-btn" title="Thu nhỏ" onclick="chatManager.minimizeChat('${chatId}')"><i class="fa-solid fa-minus"></i></button>
+      <button class="chat-btn close-btn" title="Đóng" onclick="chatManager.closeChat('${chatId}')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
   </div>
-  <div class="chat-search-bar" id="chat-search-${chatId}" style="display:none;padding:4px 8px;border-bottom:1px solid #e4e6ea">
-    <input type="text" class="form-control form-control-sm"
-           placeholder="Tìm trong cuộc trò chuyện..."
+  <div class="chat-search-bar" id="chat-search-${chatId}" style="display:none">
+    <input type="text" placeholder="Tìm trong cuộc trò chuyện..."
            oninput="chatManager.searchMessages('${chatId}', this.value)">
   </div>
-  <div id="group-settings-${chatId}" style="display:none;border-bottom:1px solid #e4e6ea;padding:10px;background:#f7f8fa;max-height:280px;overflow-y:auto">
-    <!-- populated by openGroupSettings() -->
+  <div id="group-settings-${chatId}" style="display:none;border-bottom:1px solid #e4e6eb;padding:10px;background:#f7f8fa;max-height:240px;overflow-y:auto">
   </div>
-  <div class="chat-messages" id="messages-${chatId}">
-  </div>
+  <div class="chat-messages" id="messages-${chatId}"></div>
   <div class="typing-indicator" id="typing-${chatId}" style="display:none">
     <span class="typing-name"></span>
     <span class="typing-dots"><span></span><span></span><span></span></span>
@@ -347,15 +353,16 @@ class ChatManager {
   <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
   <div class="chat-input">
     <div class="input-wrap">
-      <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn... ${type === 'group' ? '(Dùng @ để tag)' : ''}"
+      <textarea id="input-${chatId}" rows="1"
+        placeholder="${type === 'group' ? 'Nhắn tin nhóm... (@ để tag)' : 'Nhắn tin...'}"
         data-chat-type="${type}" maxlength="2000"
         oninput="chatManager.handleInput(event, '${chatId}')"
         onkeydown="chatManager.handleKeyDown(event, '${chatId}')"
         onkeypress="chatManager.handleKeyPress(event,'${chatId}')"></textarea>
       <div class="input-icons">
-        <i class="fa-regular fa-face-smile input-icon" onclick="chatManager.toggleEmoji('${chatId}')"></i>
-        <i class="fa-solid fa-paperclip input-icon" onclick="chatManager.attachFile('${chatId}')"></i>
-        <i class="fa-solid fa-paper-plane input-icon" onclick="chatManager.sendMessage('${chatId}')"></i>
+        <span class="input-icon" title="Emoji" onclick="chatManager.toggleEmoji('${chatId}')"><i class="fa-regular fa-face-smile"></i></span>
+        <span class="input-icon" title="Đính kèm" onclick="chatManager.attachFile('${chatId}')"><i class="fa-solid fa-paperclip"></i></span>
+        <span class="input-icon" title="Gửi" onclick="chatManager.sendMessage('${chatId}')"><i class="fa-solid fa-paper-plane"></i></span>
       </div>
     </div>
     <div class="file-preview-box" id="preview-${chatId}"></div>
